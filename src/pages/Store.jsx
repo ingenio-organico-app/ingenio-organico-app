@@ -8,17 +8,19 @@ export default function Store() {
     setCart((prev) => {
       const exists = prev.find((i) => i.id === id);
 
+      // Si no existe y se suma → lo agrega
       if (!exists && delta > 0) {
         return [...prev, { ...prod, qty: 1 }];
       }
 
+      // Si existe → actualiza
       return prev
         .map((item) =>
           item.id === id
             ? { ...item, qty: Math.max(0, item.qty + delta) }
             : item
         )
-        .filter((i) => i.qty > 0);
+        .filter((i) => i.qty > 0); // elimina si queda en 0
     });
   };
 
@@ -66,10 +68,10 @@ export default function Store() {
           ) : (
             <div
               key={prod.id}
-              className="p-2 bg-white rounded-xl shadow-sm flex flex-col items-center text-center"
+              className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col items-center text-center"
             >
               {/* ICONO */}
-              <span className="text-4xl mb-1">
+              <span className="text-5xl mb-1">
                 {prod.icon || "🥬"}
               </span>
 
