@@ -1,7 +1,7 @@
 import { useState } from "react";
 import products from "../data/products";
 
-export default function Store() {
+export default function StoreA1() {
   const [cart, setCart] = useState([]);
 
   const addToCart = (product) => {
@@ -28,7 +28,7 @@ export default function Store() {
     );
   };
 
-  const removeItem = (id) => setCart((prev) => prev.filter((i) => i.id !== id));
+  const getQty = (id) => cart.find((i) => i.id === id)?.qty || 0;
 
   const subtotal = cart
     .filter((i) => !i.weighed)
@@ -47,63 +47,64 @@ export default function Store() {
   const message = `Hola! Te paso mi pedido:\n\n${cart
     .map(
       (item) =>
-        `• ${item.name} x ${item.qty}${item.weighed ? " (🟰 a pesar)" : ""}${
-          item.extra ? " (EXTRA)" : ""
-        }`
+        `• ${item.name} x ${item.qty}${
+          item.weighed ? " (🟰 a pesar)" : ""
+        }${item.extra ? " (EXTRA)" : ""}`
     )
     .join("\n")}\n\n--------------------\nSubtotal: $${subtotal}\nEnvío: $${envio}\n${totalText}`;
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">Productos</h1>
+    <div className="max-w-xl mx-auto p-4">
+      <h1 className="text-3xl font-bold text-center mb-6">Productos</h1>
 
-      <div className="grid gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {products.map((prod) =>
           prod.separator ? (
             <h2
               key={prod.label}
-              className="text-xl font-semibold mt-6 border-b pb-1"
+              className="col-span-2 text-xl font-semibold border-b pb-1 mt-4"
             >
               {prod.label}
             </h2>
           ) : (
             <div
               key={prod.id}
-              className="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition"
+              className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition flex flex-col items-center"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{prod.icon}</span>
+              <div className="text-4xl mb-2">{prod.icon}</div>
 
-                <div>
-                  <h3 className="font-semibold text-base">{prod.name}</h3>
-                  <p className="text-gray-600 text-sm">
-                    {prod.price} / {prod.unit}
-                  </p>
-                  {prod.weighed && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      Producto a pesar
-                    </p>
-                  )}
-                </div>
-              </div>
+              <h3 className="font-semibold text-center text-sm">{prod.name}</h3>
 
-              <div className="flex items-center gap-2">
+              <p className="text-gray-600 text-xs mb-2">
+                {prod.price} / {prod.unit}
+              </p>
+
+              {prod.weighed && (
+                <p className="text-xs text-orange-600">Producto a pesar</p>
+              )}
+
+              <div className="flex items-center gap-2 mt-2">
                 <button
-                  className="px-3 py-1 bg-gray-200 rounded-lg active:scale-90"
-                  onClick={() => updateQty(prod.id, -1)}
+                  className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90"
+                  onClick={() => {
+                    if (getQty(prod.id) > 0) updateQty(prod.id, -1);
+                  }}
                 >
                   -
                 </button>
 
-                <span className="w-6 text-center font-semibold">
-                  {cart.find((i) => i.id === prod.id)?.qty || 0}
+                <span className="w-5 text-center font-semibold">
+                  {getQty(prod.id)}
                 </span>
 
                 <button
-                  className="px-3 py-1 bg-gray-200 rounded-lg active:scale-90"
-                  onClick={() => updateQty(prod.id, 1)}
+                  className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90"
+                  onClick={() => {
+                    if (getQty(prod.id) > 0) updateQty(prod.id, 1);
+                    else addToCart(prod);
+                  }}
                 >
                   +
                 </button>
@@ -124,12 +125,13 @@ export default function Store() {
             >
               <span>
                 {item.name} x {item.qty} {item.weighed && "(a pesar)"}
-                {item.extra && " (EXTRA)"}
               </span>
 
               <button
                 className="text-red-500 hover:text-red-700"
-                onClick={() => removeItem(item.id)}
+                onClick={() =>
+                  setCart((prev) => prev.filter((i) => i.id !== item.id))
+                }
               >
                 ❌
               </button>
@@ -141,7 +143,7 @@ export default function Store() {
           <p className="mt-2 font-bold">{totalText}</p>
 
           <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-            <button className="mt-4 w-full py-2 bg-green-500 text-white rounded hover:bg-green-600">
+            <button className="mt-4 w-full py-2 bg-green-500 text-white rounded-xl hover:bg-green-600">
               Enviar pedido por WhatsApp
             </button>
           </a>
