@@ -1,11 +1,45 @@
-import { useState } from "react";
-import products from "../data/products";
+import { useState, useEffect } from "react";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { db } from "../firebase/firebase";
 
 // Firebase
 import { saveOrder } from "../firebase/orders";
 
 export default function Store() {
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
+
+  // 🔥 Cargar productos en tiempo real desde Firebase
+  useEffect(() => {
+    const colRef = collection(db, "products");
+    const q = query(colRef, orderBy("name"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      const available = list.filter((p) => p.available);
+
+      // Separar secciones
+      const general = available.filter((p) => !p.extra);
+      const extra = available.filter((p) => p.extra);
+
+      // Crear array final con separadores
+      const finalList = [
+        ...general,
+        { separator: true, label: "Productos Extra" },
+        ...extra,
+      ];
+
+      setProducts(finalList);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // ---------------- Carrito -------------------
 
   const updateQty = (id, delta, prod) => {
     setCart((prev) => {
@@ -53,7 +87,6 @@ export default function Store() {
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
-  // 🔥 NUEVA FUNCIÓN PARA GUARDAR PEDIDO Y ABRIR WHATSAPP
   const handleSendOrder = async () => {
     if (cart.length === 0) return;
 
@@ -67,22 +100,22 @@ export default function Store() {
       const orderId = await saveOrder(orderData);
       console.log("Pedido guardado con ID:", orderId);
 
-      // Abrir WhatsApp
       window.open(whatsappUrl, "_blank");
     } catch (error) {
       alert("Error al guardar el pedido. Intenta nuevamente.");
     }
   };
 
+  // --------------------------------------------
+
   return (
     <div className="max-w-4xl mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6 text-center">Productos</h1>
 
-      {/* GRID DE 3 COLUMNAS */}
       <div className="grid grid-cols-3 gap-3">
-        {products.map((prod) =>
+        {products.map((prod, index) =>
           prod.separator ? (
-            <div key={prod.label} className="col-span-3 mt-4 mb-1">
+            <div key={`sep-${index}`} className="col-span-3 mt-4 mb-1">
               <h2 className="text-lg font-semibold border-b pb-1">
                 {prod.label}
               </h2>
@@ -128,7 +161,6 @@ export default function Store() {
         )}
       </div>
 
-      {/* CARRITO */}
       {cart.length > 0 && (
         <div className="mt-6 p-4 bg-gray-50 rounded-xl shadow">
           <h2 className="text-2xl font-semibold mb-3">Tu pedido:</h2>
