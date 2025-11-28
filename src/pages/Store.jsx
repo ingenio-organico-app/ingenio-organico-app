@@ -1,6 +1,9 @@
 import { useState } from "react";
 import products from "../data/products";
 
+// Firebase
+import { saveOrder } from "../firebase/orders";
+
 export default function Store() {
   const [cart, setCart] = useState([]);
 
@@ -8,19 +11,17 @@ export default function Store() {
     setCart((prev) => {
       const exists = prev.find((i) => i.id === id);
 
-      // Si no existe y se suma → lo agrega
       if (!exists && delta > 0) {
         return [...prev, { ...prod, qty: 1 }];
       }
 
-      // Si existe → actualiza
       return prev
         .map((item) =>
           item.id === id
             ? { ...item, qty: Math.max(0, item.qty + delta) }
             : item
         )
-        .filter((i) => i.qty > 0); // elimina si queda en 0
+        .filter((i) => i.qty > 0);
     });
   };
 
@@ -52,6 +53,27 @@ export default function Store() {
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
+  // 🔥 NUEVA FUNCIÓN PARA GUARDAR PEDIDO Y ABRIR WHATSAPP
+  const handleSendOrder = async () => {
+    if (cart.length === 0) return;
+
+    const orderData = {
+      cart,
+      subtotal,
+      envio,
+    };
+
+    try {
+      const orderId = await saveOrder(orderData);
+      console.log("Pedido guardado con ID:", orderId);
+
+      // Abrir WhatsApp
+      window.open(whatsappUrl, "_blank");
+    } catch (error) {
+      alert("Error al guardar el pedido. Intenta nuevamente.");
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6 text-center">Productos</h1>
@@ -70,28 +92,18 @@ export default function Store() {
               key={prod.id}
               className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col items-center text-center"
             >
-              {/* ICONO */}
-              <span className="text-5xl mb-1">
-                {prod.icon || "🥬"}
-              </span>
+              <span className="text-5xl mb-1">{prod.icon || "🥬"}</span>
 
-              {/* NOMBRE */}
-              <h3 className="font-semibold text-sm leading-tight">
-                {prod.name}
-              </h3>
+              <h3 className="font-semibold text-sm leading-tight">{prod.name}</h3>
 
-              {/* PRECIO */}
               <p className="text-gray-600 text-xs mb-1">
                 ${prod.price} / {prod.unit}
               </p>
 
               {prod.weighed && (
-                <p className="text-[10px] text-orange-600 mb-1">
-                  A pesar
-                </p>
+                <p className="text-[10px] text-orange-600 mb-1">A pesar</p>
               )}
 
-              {/* CONTROLES */}
               <div className="flex items-center gap-2 mt-auto mb-1">
                 <button
                   className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90 text-sm"
@@ -144,11 +156,12 @@ export default function Store() {
           <p>Envío: ${envio}</p>
           <p className="mt-2 font-bold">{totalText}</p>
 
-          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-            <button className="mt-4 w-full py-2 bg-green-500 text-white rounded hover:bg-green-600">
-              Enviar pedido por WhatsApp
-            </button>
-          </a>
+          <button
+            onClick={handleSendOrder}
+            className="mt-4 w-full py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            Enviar pedido por WhatsApp
+          </button>
         </div>
       )}
     </div>
