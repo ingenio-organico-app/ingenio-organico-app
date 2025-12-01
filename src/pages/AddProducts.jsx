@@ -1,98 +1,166 @@
-import { useState } from "react";
-import { db } from "../firebase/firebase";
-import { collection, addDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase/firebase";
+// src/pages/AdminProducts.jsx
+import { useEffect, useState } from "react";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc
+} from "firebase/firestore";
+import { db, storage } from "../firebase/firebase";
+import { uploadProducts } from "../firebase/uploadProducts";
+import UploadProducts from "./UploadProducts";
+import EditProduct from "./EditProduct";
+import { ref, deleteObject } from "firebase/storage";
 
-export default function AddProduct({ onProductAdded }) {
-  const [name, setName] = useState("");
-  const [extra, setExtra] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  const [loading, setLoading] = useState(false);
+export default function AdminProducts() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const fetchProducts = async () => {
     setLoading(true);
+    const snapshot = await getDocs(collection(db, "products"));
+
+    const prods = snapshot.docs
+      .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    setProducts(prods);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const toggleAvailable = async (id, current) => {
+    await updateDoc(doc(db, "products", id), {
+      available: !current
+    });
+
+    setProducts(prev =>
+      prev.map(p => (p.id === id ? { ...p, available: !current } : p))
+    );
+  };
+
+  const deleteProduct = async prod => {
+    const ok = confirm(`¿Eliminar "${prod.name}"?`);
+    if (!ok) return;
 
     try {
-      let imageUrl = "";
-
-      // Subir imagen si existe
-      if (imageFile) {
-        const imageRef = ref(storage, `products/${Date.now()}-${imageFile.name}`);
-        await uploadBytes(imageRef, imageFile);
-        imageUrl = await getDownloadURL(imageRef);
+      if (prod.image) {
+        const imgRef = ref(storage, prod.image);
+        await deleteObject(imgRef).catch(() => {});
       }
 
-      // Crear producto en Firestore
-      const newProduct = {
-        name,
-        extra,
-        image: imageUrl,
-        available: true,
-      };
+      await deleteDoc(doc(db, "products", prod.id));
 
-      await addDoc(collection(db, "products"), newProduct);
+      setProducts(prev => prev.filter(p => p.id !== prod.id));
 
-      // Limpiar formulario
-      setName("");
-      setExtra(false);
-      setImageFile(null);
-
-      if (onProductAdded) onProductAdded();
-
-      alert("Producto agregado con éxito ✔");
-
-    } catch (error) {
-      console.error("Error al agregar producto:", error);
-      alert("❌ Error al agregar producto");
-    } finally {
-      setLoading(false);
+      alert("Producto eliminado ✔");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Error al eliminar producto");
     }
   };
 
-  return (
-    <div className="border p-4 rounded mb-6">
-      <h2 className="text-xl font-semibold mb-3">Agregar producto nuevo</h2>
+  const handleUploadProducts = async () => {
+    setUploading(true);
+    const added = await uploadProducts();
+    alert(`${added} productos nuevos subidos`);
+    await fetchProducts();
+    setUploading(false);
+  };
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block mb-1 font-medium">Nombre:</label>
-          <input
-            type="text"
-            className="border p-2 w-full rounded"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
+  if (loading) return <p>Cargando productos...</p>;
 
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={extra}
-            onChange={() => setExtra(!extra)}
-          />
-          <label>Es producto extra</label>
-        </div>
+  const generalProducts = products.filter(p => !p.extra);
+  const extraProducts = products.filter(p => p.extra);
 
-        <div>
-          <label className="block mb-1 font-medium">Imagen (opcional):</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files[0])}
-          />
-        </div>
+  const renderRow = prod => (
+    <tr key={prod.id} className="text-center">
+      <td className="p-2 border">{prod.name}</td>
+      <td className="p-2 border">{prod.available ? "✅" : "❌"}</td>
+      <td className="p-2 border space-x-2">
+        <button
+          className="px-3 py-1 bg-blue-500 text-white rounded"
+          onClick={() => toggleAvailable(prod.id, prod.available)}
+        >
+          Disponibilidad
+        </button>
 
         <button
-          type="submit"
-          disabled={loading}
-          className={`px-4 py-2 text-white rounded ${loading ? "bg-gray-500" : "bg-green-600 hover:bg-green-700"}`}
+          className="px-3 py-1 bg-amber-500 text-white rounded"
+          onClick={() => setEditingProduct(prod)}
         >
-          {loading ? "Guardando..." : "Agregar Producto"}
+          Editar
         </button>
-      </form>
+
+        <button
+          className="px-3 py-1 bg-red-600 text-white rounded"
+          onClick={() => deleteProduct(prod)}
+        >
+          Eliminar
+        </button>
+      </td>
+    </tr>
+  );
+
+  return (
+    <div className="max-w-4xl mx-auto p-4">
+
+      <h1 className="text-2xl font-bold mb-4">Administrar Productos</h1>
+
+      {editingProduct && (
+        <EditProduct
+          product={editingProduct}
+          onSaved={updated => {
+            setProducts(prev =>
+              prev.map(p => (p.id === updated.id ? updated : p))
+            );
+            setEditingProduct(null);
+          }}
+          onCancel={() => setEditingProduct(null)}
+        />
+      )}
+
+      <UploadProducts onProductAdded={fetchProducts} />
+
+      <div className="mb-4">
+        <button
+          onClick={handleUploadProducts}
+          disabled={uploading}
+          className="px-4 py-2 bg-green-600 text-white rounded"
+        >
+          {uploading ? "Subiendo..." : "Subir lista completa"}
+        </button>
+      </div>
+
+      <h2 className="text-xl font-semibold mb-2">Productos Generales</h2>
+      <table className="w-full border mb-6">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="p-2 border">Nombre</th>
+            <th className="p-2 border">Disponible</th>
+            <th className="p-2 border">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>{generalProducts.map(renderRow)}</tbody>
+      </table>
+
+      <h2 className="text-xl font-semibold mb-2">Productos Extra</h2>
+      <table className="w-full border">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="p-2 border">Nombre</th>
+            <th className="p-2 border">Disponible</th>
+            <th className="p-2 border">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>{extraProducts.map(renderRow)}</tbody>
+      </table>
     </div>
   );
 }

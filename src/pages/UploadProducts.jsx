@@ -1,93 +1,101 @@
+// src/pages/UploadProducts.jsx
 import { useState } from "react";
-import { collection, addDoc, getDocs } from "firebase/firestore";
-import { db } from "../firebase/firebase";
+import { db, storage } from "../firebase/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function UploadProducts({ onProductAdded }) {
   const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [unit, setUnit] = useState("");
-  const [icon, setIcon] = useState("");
   const [extra, setExtra] = useState(false);
-  const [weighed, setWeighed] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleAdd = async () => {
-    if (!name || !price || !unit) return alert("Completa nombre, precio y unidad");
-    
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setLoading(true);
-    try {
-      const colRef = collection(db, "products");
 
-      // Traer ids existentes para no duplicar
-      const snapshot = await getDocs(colRef);
-      const existingIds = snapshot.docs.map(doc => doc.data().id);
-      const newId = existingIds.length ? Math.max(...existingIds) + 1 : 1;
+    try {
+      let imageUrl = "";
+
+      if (imageFile) {
+        const imageRef = ref(
+          storage,
+          `products/${Date.now()}-${imageFile.name}`
+        );
+        await uploadBytes(imageRef, imageFile);
+        imageUrl = await getDownloadURL(imageRef);
+      }
 
       const newProduct = {
-        available: true,
-        icon,
-        id: newId,
         name,
-        price: Number(price),
-        unit,
-        ...(weighed ? { weighed: true } : {}),
-        ...(extra ? { extra: true } : {})
+        extra,
+        image: imageUrl,
+        available: true,
+        createdAt: serverTimestamp(),
+        order: Date.now(), // 🔢 los nuevos van al final por defecto
       };
 
-      await addDoc(colRef, newProduct);
-      alert("Producto agregado ✔");
-      onProductAdded?.();
-      setName(""); setPrice(""); setUnit(""); setIcon(""); setExtra(false); setWeighed(false);
-    } catch (err) {
-      console.error(err);
-      alert("Error al agregar producto");
+      await addDoc(collection(db, "products"), newProduct);
+
+      setName("");
+      setExtra(false);
+      setImageFile(null);
+
+      if (onProductAdded) onProductAdded();
+
+      alert("Producto agregado con éxito ✔");
+    } catch (error) {
+      console.error("Error al agregar producto:", error);
+      alert("❌ Error al agregar producto");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div className="border p-4 rounded mb-6">
-      <h2 className="text-xl font-semibold mb-3">Agregar Producto</h2>
-      <input
-        className="border p-1 mb-2 w-full"
-        placeholder="Nombre"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <input
-        className="border p-1 mb-2 w-full"
-        placeholder="Precio"
-        type="number"
-        value={price}
-        onChange={(e) => setPrice(e.target.value)}
-      />
-      <input
-        className="border p-1 mb-2 w-full"
-        placeholder="Unidad (ej: kg, unidad)"
-        value={unit}
-        onChange={(e) => setUnit(e.target.value)}
-      />
-      <input
-        className="border p-1 mb-2 w-full"
-        placeholder="Icono (emoji)"
-        value={icon}
-        onChange={(e) => setIcon(e.target.value)}
-      />
-      <div className="flex gap-4 mb-2">
-        <label>
-          <input type="checkbox" checked={extra} onChange={() => setExtra(!extra)} /> Extra
-        </label>
-        <label>
-          <input type="checkbox" checked={weighed} onChange={() => setWeighed(!weighed)} /> Pesable
-        </label>
-      </div>
-      <button
-        onClick={handleAdd}
-        disabled={loading}
-        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-      >
-        {loading ? "Agregando..." : "Agregar Producto"}
-      </button>
+      <h2 className="text-xl font-semibold mb-3">Agregar producto nuevo</h2>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block mb-1 font-medium">Nombre:</label>
+          <input
+            type="text"
+            className="border p-2 w-full rounded"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={extra}
+            onChange={() => setExtra(!extra)}
+          />
+          <label>Es producto extra</label>
+        </div>
+
+        <div>
+          <label className="block mb-1 font-medium">Imagen (opcional):</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setImageFile(e.target.files[0])}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={`px-4 py-2 text-white rounded ${
+            loading ? "bg-gray-500" : "bg-green-600 hover:bg-green-700"
+          }`}
+        >
+          {loading ? "Guardando..." : "Agregar Producto"}
+        </button>
+      </form>
     </div>
   );
 }

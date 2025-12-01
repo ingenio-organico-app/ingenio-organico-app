@@ -1,14 +1,27 @@
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 
-// Obtiene semana actual en formato año-semana
-function getCurrentWeek() {
-  const now = new Date();
-  const oneJan = new Date(now.getFullYear(), 0, 1);
-  const numberOfDays = Math.floor((now - oneJan) / (24 * 60 * 60 * 1000));
-  const week = Math.ceil((now.getDay() + 1 + numberOfDays) / 7);
+// 📌 Obtener semana ISO (lunes a domingo)
+function getCurrentISOWeek() {
+  const date = new Date();
 
-  return `${now.getFullYear()}-${week}`;
+  // Pasamos al jueves de la semana actual (regla ISO)
+  date.setDate(date.getDate() + 4 - (date.getDay() || 7));
+
+  // Año ISO
+  const isoYear = date.getFullYear();
+
+  // Calculamos semana ISO
+  const startOfYear = new Date(isoYear, 0, 1);
+  const diff = date - startOfYear;
+  const oneWeek = 7 * 24 * 60 * 60 * 1000;
+  const isoWeek = Math.ceil(diff / oneWeek);
+
+  return {
+    weekId: `${isoYear}-${String(isoWeek).padStart(2, "0")}`,
+    weekNumber: isoWeek,
+    year: isoYear,
+  };
 }
 
 export async function saveOrder(orderData) {
@@ -16,17 +29,27 @@ export async function saveOrder(orderData) {
     const { cart, subtotal, envio } = orderData;
     const total = subtotal + envio;
 
+    // 🔥 Obtener semana ISO
+    const { weekId, weekNumber, year } = getCurrentISOWeek();
+
     const docRef = await addDoc(collection(db, "orders"), {
       cart,
       subtotal,
       envio,
       total,
-      createdAt: new Date(),
-      week: getCurrentWeek(),
+
+      // 📌 Timestamp oficial del servidor
+      createdAt: serverTimestamp(),
+
+      // 📌 Semana para estadísticas
+      weekId,        // ejemplo: "2025-03"
+      weekNumber,    // ejemplo: 3
+      year,          // ejemplo: 2025
     });
 
     console.log("Pedido guardado con ID:", docRef.id);
-    return docRef.id; // devolvemos el ID para poder usarlo si queremos
+    return docRef.id;
+
   } catch (error) {
     console.error("Error al guardar pedido:", error);
     throw error;

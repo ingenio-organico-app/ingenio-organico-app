@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+
+// 🔥 Importamos estadísticas semanales
+import { useWeeklyStats } from "../firebase/stats";
+
 import { uploadProducts } from "../firebase/uploadProducts";
 
 export default function Admin() {
@@ -10,7 +14,10 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  const ADMIN_PASSWORD = "admin"; // tu clave de admin
+  const ADMIN_PASSWORD = "admin";
+
+  // Listener de estadísticas
+  const weekly = useWeeklyStats();
 
   // Validar clave
   const handleLogin = () => {
@@ -27,7 +34,7 @@ export default function Admin() {
     setLoading(true);
     const colRef = collection(db, "products");
     const snapshot = await getDocs(colRef);
-    const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const prods = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     setProducts(prods);
     setLoading(false);
   };
@@ -36,8 +43,8 @@ export default function Admin() {
   const toggleAvailable = async (prodId, current) => {
     const docRef = doc(db, "products", prodId);
     await updateDoc(docRef, { available: !current });
-    setProducts(prev =>
-      prev.map(p => (p.id === prodId ? { ...p, available: !current } : p))
+    setProducts((prev) =>
+      prev.map((p) => (p.id === prodId ? { ...p, available: !current } : p))
     );
   };
 
@@ -47,7 +54,7 @@ export default function Admin() {
     try {
       await uploadProducts();
       alert("✔ Productos subidos con éxito");
-      fetchProducts(); // refrescar tabla
+      fetchProducts();
     } catch (error) {
       console.error(error);
       alert("❌ Error al subir productos");
@@ -64,7 +71,7 @@ export default function Admin() {
           type="password"
           placeholder="Ingresa la clave"
           value={passwordInput}
-          onChange={e => setPasswordInput(e.target.value)}
+          onChange={(e) => setPasswordInput(e.target.value)}
           className="w-full p-2 border rounded mb-4"
         />
         <button
@@ -81,7 +88,9 @@ export default function Admin() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4 text-center">Administrar Productos</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">
+        Administrar Productos
+      </h1>
 
       {/* Botón subir productos */}
       <div className="mb-6 text-center">
@@ -97,7 +106,7 @@ export default function Admin() {
       </div>
 
       {/* Tabla productos */}
-      <table className="w-full border">
+      <table className="w-full border mb-10">
         <thead>
           <tr className="bg-gray-200">
             <th className="p-2 border">Nombre</th>
@@ -106,7 +115,7 @@ export default function Admin() {
           </tr>
         </thead>
         <tbody>
-          {products.map(prod => (
+          {products.map((prod) => (
             <tr key={prod.id} className="text-center">
               <td className="p-2 border">{prod.name}</td>
               <td className="p-2 border">{prod.available ? "✅" : "❌"}</td>
@@ -122,6 +131,52 @@ export default function Admin() {
           ))}
         </tbody>
       </table>
+
+      {/* 🔥 ESTADÍSTICAS SEMANALES */}
+      <div className="p-4 bg-gray-50 border rounded-xl shadow">
+        <h2 className="text-xl font-bold mb-3 text-center">
+          📅 Estadísticas Semanales
+        </h2>
+
+        <p className="text-center mb-2">
+          <strong>Semana actual:</strong> {weekly.week}
+        </p>
+
+        <p className="text-center">
+          <strong>Pedidos totales:</strong> {weekly.totalOrders}
+        </p>
+
+        <p className="text-center mb-4">
+          <strong>Total vendido:</strong> ${weekly.totalRevenue}
+        </p>
+
+        <h3 className="font-semibold mb-2">Productos vendidos:</h3>
+
+        <table className="w-full border">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="p-2 border">Producto</th>
+              <th className="p-2 border">Cantidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {weekly.products.length === 0 && (
+              <tr>
+                <td colSpan="2" className="p-2 text-center">
+                  Sin pedidos esta semana
+                </td>
+              </tr>
+            )}
+
+            {weekly.products.map((p) => (
+              <tr key={p.name}>
+                <td className="p-2 border">{p.name}</td>
+                <td className="p-2 border text-center">{p.qty}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
