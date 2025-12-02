@@ -7,6 +7,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 export default function UploadProducts({ onProductAdded }) {
   const [name, setName] = useState("");
   const [extra, setExtra] = useState(false);
+  const [weighed, setWeighed] = useState(false); // producto pesable
+  const [price, setPrice] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -26,19 +28,25 @@ export default function UploadProducts({ onProductAdded }) {
         imageUrl = await getDownloadURL(imageRef);
       }
 
+      const numericPrice = Number(price);
+
       const newProduct = {
         name,
         extra,
+        weighed,
+        price: isNaN(numericPrice) ? 0 : numericPrice,
         image: imageUrl,
         available: true,
         createdAt: serverTimestamp(),
-        order: Date.now(), // 🔢 los nuevos van al final por defecto
+        order: Date.now(), // para que vaya al final
       };
 
       await addDoc(collection(db, "products"), newProduct);
 
       setName("");
       setExtra(false);
+      setWeighed(false);
+      setPrice("");
       setImageFile(null);
 
       if (onProductAdded) onProductAdded();
@@ -53,10 +61,11 @@ export default function UploadProducts({ onProductAdded }) {
   };
 
   return (
-    <div className="border p-4 rounded mb-6">
+    <div className="border p-4 rounded mb-6 bg-gray-50">
       <h2 className="text-xl font-semibold mb-3">Agregar producto nuevo</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Nombre */}
         <div>
           <label className="block mb-1 font-medium">Nombre:</label>
           <input
@@ -68,17 +77,46 @@ export default function UploadProducts({ onProductAdded }) {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Precio */}
+        <div>
+          <label className="block mb-1 font-medium">Precio:</label>
           <input
-            type="checkbox"
-            checked={extra}
-            onChange={() => setExtra(!extra)}
+            type="number"
+            min="0"
+            step="1"
+            className="border p-2 w-full rounded"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
           />
-          <label>Es producto extra</label>
         </div>
 
+        {/* Extra / Pesable */}
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={extra}
+              onChange={() => setExtra(!extra)}
+            />
+            <span>Es producto extra</span>
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={weighed}
+              onChange={() => setWeighed(!weighed)}
+            />
+            <span>Es producto pesable</span>
+          </label>
+        </div>
+
+        {/* Imagen */}
         <div>
-          <label className="block mb-1 font-medium">Imagen (opcional):</label>
+          <label className="block mb-1 font-medium">
+            Imagen (opcional):
+          </label>
           <input
             type="file"
             accept="image/*"

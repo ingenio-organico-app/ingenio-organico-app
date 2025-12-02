@@ -107,49 +107,58 @@ export default function Store() {
     .sort(sortByOrder);
 
   const renderCard = (prod) => (
-    <div
-      key={prod.id}
-      className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col items-center text-center"
-    >
-      {/* ICONO */}
-      <span className="text-5xl mb-1">{prod.icon || "🥬"}</span>
+  <div
+    key={prod.id}
+    className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col items-center text-center"
+  >
+    {/* IMAGEN / ÍCONO */}
+    {prod.image ? (
+      <img
+        src={prod.image}
+        alt={prod.name}
+        className="h-16 w-16 object-cover rounded mb-1"
+      />
+    ) : (
+      <span className="text-5xl mb-1">🥬</span>
+    )}
 
-      {/* NOMBRE */}
-      <h3 className="font-semibold text-sm leading-tight">{prod.name}</h3>
+    {/* NOMBRE */}
+    <h3 className="font-semibold text-sm leading-tight">{prod.name}</h3>
 
-      {/* PRECIO */}
-      {prod.price && prod.unit && (
-        <p className="text-gray-600 text-xs mb-1">
-          ${prod.price} / {prod.unit}
-        </p>
-      )}
+    {/* PRECIO */}
+    {prod.price && prod.unit && (
+      <p className="text-gray-600 text-xs mb-1">
+        ${prod.price} / {prod.unit}
+      </p>
+    )}
 
-      {prod.weighed && (
-        <p className="text-[10px] text-orange-600 mb-1">A pesar</p>
-      )}
+    {prod.weighed && (
+      <p className="text-[10px] text-orange-600 mb-1">A pesar</p>
+    )}
 
-      {/* CONTROLES */}
-      <div className="flex items-center gap-2 mt-auto mb-1">
-        <button
-          className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90 text-sm"
-          onClick={() => updateQty(prod.id, -1, prod)}
-        >
-          -
-        </button>
+    {/* CONTROLES */}
+    <div className="flex items-center gap-2 mt-auto mb-1">
+      <button
+        className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90 text-sm"
+        onClick={() => updateQty(prod.id, -1, prod)}
+      >
+        -
+      </button>
 
-        <span className="w-5 text-center font-bold text-sm">
-          {cart.find((i) => i.id === prod.id)?.qty || 0}
-        </span>
+      <span className="w-5 text-center font-bold text-sm">
+        {cart.find((i) => i.id === prod.id)?.qty || 0}
+      </span>
 
-        <button
-          className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90 text-sm"
-          onClick={() => updateQty(prod.id, 1, prod)}
-        >
-          +
-        </button>
-      </div>
+      <button
+        className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90 text-sm"
+        onClick={() => updateQty(prod.id, 1, prod)}
+      >
+        +
+      </button>
     </div>
-  );
+  </div>
+);
+
 
   return (
     <div className="max-w-4xl mx-auto p-4">

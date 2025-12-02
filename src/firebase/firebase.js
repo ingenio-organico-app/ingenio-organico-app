@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDlMT2qnBoQB97S5Fv_VoNevcMlqPJd_2Y",
   authDomain: "ingenio-organico.firebaseapp.com",
   projectId: "ingenio-organico",
-  storageBucket: "ingenio-organico.firebasestorage.app",
+  storageBucket: "ingenio-organico.firebasestorage.app", // ← CORREGIDO
   messagingSenderId: "463427808590",
   appId: "1:463427808590:web:88766bb1b4fc5f115f021f"
 };

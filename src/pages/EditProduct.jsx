@@ -7,82 +7,160 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 export default function EditProduct({ product, onSaved, onCancel }) {
   const [name, setName] = useState(product?.name || "");
   const [extra, setExtra] = useState(!!product?.extra);
+  const [weighed, setWeighed] = useState(!!product?.weighed); // producto pesable
+  const [price, setPrice] = useState(
+    typeof product?.price === "number" ? String(product.price) : ""
+  );
   const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(product?.image || null); // 👈 vista previa
   const [loading, setLoading] = useState(false);
 
   if (!product) return null;
 
-  const handleSubmit = async e => {
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setImageFile(file || null);
+
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const updates = { name, extra };
+      const updates = {
+        name,
+        extra,
+        weighed,
+      };
 
+      // Precio numérico
+      const numericPrice = Number(price);
+      updates.price = isNaN(numericPrice) ? 0 : numericPrice;
+
+      // Imagen nueva (solo si se seleccionó archivo)
       if (imageFile) {
         const imageRef = ref(
           storage,
           `products/${Date.now()}-${imageFile.name}`
         );
         await uploadBytes(imageRef, imageFile);
-        updates.image = await getDownloadURL(imageRef);
+        const url = await getDownloadURL(imageRef);
+        updates.image = url;
       }
 
+      // Guardar en Firestore
       await updateDoc(doc(db, "products", product.id), updates);
 
-      onSaved({ ...product, ...updates });
+      if (onSaved) onSaved({ ...product, ...updates });
 
       alert("Producto actualizado ✔");
-    } catch (error) {
-      console.error(error);
-      alert("❌ Error al editar");
+    } catch (e) {
+      console.error("Error al editar producto:", e);
+      alert("Error al editar producto: " + (e.message || e));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="border p-4 rounded mb-6 bg-gray-50">
-      <h2 className="text-xl font-semibold mb-3">Editar: {product.name}</h2>
+    <div className="border p-4 rounded mb-6 bg-gray-100">
+      <h2 className="text-xl font-semibold mb-3">
+        Editar producto: <span className="font-normal">{product.name}</span>
+      </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-
+        {/* Nombre */}
         <div>
           <label className="block mb-1 font-medium">Nombre:</label>
           <input
             type="text"
             className="border p-2 w-full rounded"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             required
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Precio */}
+        <div>
+          <label className="block mb-1 font-medium">Precio:</label>
           <input
-            type="checkbox"
-            checked={extra}
-            onChange={() => setExtra(!extra)}
+            type="number"
+            min="0"
+            step="1"
+            className="border p-2 w-full rounded"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
           />
-          <label>Es extra</label>
         </div>
 
+        {/* Extra / Pesable */}
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={extra}
+              onChange={() => setExtra(!extra)}
+            />
+            <span>Es producto extra</span>
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={weighed}
+              onChange={() => setWeighed(!weighed)}
+            />
+            <span>Es producto pesable</span>
+          </label>
+        </div>
+
+        {/* Imagen nueva + vista previa */}
         <div>
-          <label className="block mb-1 font-medium">Imagen nueva:</label>
+          <label className="block mb-1 font-medium">
+            Cambiar imagen (opcional):
+          </label>
           <input
             type="file"
             accept="image/*"
-            onChange={e => setImageFile(e.target.files[0])}
+            onChange={handleImageChange}
           />
+
+          {previewUrl && (
+            <div className="mt-2">
+              <p className="text-xs mb-1 text-gray-600">
+                Vista previa de la imagen:
+              </p>
+              <img
+                src={previewUrl}
+                alt={`Imagen de ${name}`}
+                className="h-24 w-24 object-cover rounded border"
+              />
+            </div>
+          )}
+
+          {!imageFile && product.image && (
+            <p className="text-xs mt-1 text-gray-500">
+              Si no elegís otra imagen, se mantiene la actual.
+            </p>
+          )}
         </div>
 
         <div className="flex gap-2 mt-2">
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded"
+            className={`px-4 py-2 text-white rounded ${
+              loading ? "bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            Guardar
+            {loading ? "Guardando..." : "Guardar cambios"}
           </button>
 
           <button

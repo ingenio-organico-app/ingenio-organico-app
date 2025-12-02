@@ -13,146 +13,223 @@ import UploadProducts from "./UploadProducts";
 import EditProduct from "./EditProduct";
 import { ref, deleteObject } from "firebase/storage";
 
+// Orden: primero por "order", si no existe se manda al final.
+// En empate, orden alfabético por nombre.
+const sortByOrder = (a, b) => {
+  const ao = typeof a.order === "number" ? a.order : 999999;
+  const bo = typeof b.order === "number" ? b.order : 999999;
+  if (ao !== bo) return ao - bo;
+  return (a.name || "").localeCompare(b.name || "");
+};
+
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showAddPanel, setShowAddPanel] = useState(false); // panel desplegable
 
-  const sortByOrder = (a, b) => {
-    const ao = typeof a.order === "number" ? a.order : 999999;
-    const bo = typeof b.order === "number" ? b.order : 999999;
-    if (ao !== bo) return ao - bo;
-    return (a.name || "").localeCompare(b.name || "");
-  };
-
+  // Cargar productos desde Firestore
   const fetchProducts = async () => {
-    setLoading(true);
-    const snapshot = await getDocs(collection(db, "products"));
+    try {
+      setLoading(true);
+      const snapshot = await getDocs(collection(db, "products"));
 
-    const prods = snapshot.docs
-      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .filter((p) => p.name)
-      .sort(sortByOrder);
+      const list = snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          ...data,
+          id: d.id,                    // SIEMPRE el id real del documento
+          originalId: data.id ?? null, // opcional, id viejo numérico si existía
+        };
+      });
 
-    setProducts(prods);
-    setLoading(false);
+      setProducts(list);
+    } catch (e) {
+      console.error("Error al obtener productos:", e);
+      alert("Error cargando productos: " + (e.message || e));
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  const toggleAvailable = async (id, current) => {
-    await updateDoc(doc(db, "products", id), {
-      available: !current,
-    });
+  // Cambiar disponibilidad
+  const toggleAvailable = async (prod) => {
+    try {
+      const current = prod.available;
+      const newValue = current === false ? true : !current;
 
-    setProducts((prev) =>
-      prev
-        .map((p) => (p.id === id ? { ...p, available: !current } : p))
-        .sort(sortByOrder)
-    );
+      await updateDoc(doc(db, "products", prod.id), {
+        available: newValue,
+      });
+
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === prod.id ? { ...p, available: newValue } : p
+        )
+      );
+    } catch (e) {
+      console.error("Error al cambiar disponibilidad:", e);
+      alert("Error al cambiar disponibilidad: " + (e.message || e));
+    }
   };
 
+  // Eliminar producto (y su imagen si tiene)
   const deleteProduct = async (prod) => {
     const ok = window.confirm(`¿Eliminar "${prod.name}"?`);
     if (!ok) return;
 
     try {
       if (prod.image) {
-        const imgRef = ref(storage, prod.image);
-        await deleteObject(imgRef).catch(() => {});
+        try {
+          await deleteObject(ref(storage, prod.image));
+        } catch (e) {
+          console.warn("No se pudo borrar imagen (puede no existir):", e);
+        }
       }
 
       await deleteDoc(doc(db, "products", prod.id));
 
       setProducts((prev) => prev.filter((p) => p.id !== prod.id));
-
       alert("Producto eliminado ✔");
-    } catch (err) {
-      console.error(err);
-      alert("❌ Error al eliminar producto");
+    } catch (e) {
+      console.error("Error al eliminar producto:", e);
+      alert("Error al eliminar producto: " + (e.message || e));
     }
   };
 
-  const handleUploadProducts = async () => {
-    setUploading(true);
-    const added = await uploadProducts();
-    alert(`${added} productos nuevos subidos`);
-    await fetchProducts();
-    setUploading(false);
-  };
-
-  // Cambiar orden ↑ / ↓
-  const changeOrder = async (prod, direction) => {
-    const currentOrder =
-      typeof prod.order === "number" ? prod.order : 999999;
-    const delta = direction === "up" ? -1 : 1;
-    const newOrder = currentOrder + delta;
-
+  // Mover producto arriba/abajo dentro de su grupo (general/extra)
+  // Recalcula el "order" de TODO el grupo para que no haya 999999 mezclados.
+  const moveProduct = async (prod, direction) => {
     try {
-      await updateDoc(doc(db, "products", prod.id), { order: newOrder });
+      const isExtra = !!prod.extra;
 
-      setProducts((prev) =>
-        prev
-          .map((p) =>
-            p.id === prod.id ? { ...p, order: newOrder } : p
-          )
-          .sort(sortByOrder)
+      // Grupo donde pertenece (general o extra)
+      const group = products
+        .filter((p) => !!p.extra === isExtra)
+        .sort(sortByOrder);
+
+      const index = group.findIndex((p) => p.id === prod.id);
+      if (index === -1) return;
+
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= group.length) return;
+
+      // Nuevo array con el producto movido
+      const newGroup = [...group];
+      const temp = newGroup[index];
+      newGroup[index] = newGroup[targetIndex];
+      newGroup[targetIndex] = temp;
+
+      // Asignar orden consecutivo a TODO el grupo
+      const newGroupWithOrder = newGroup.map((p, idx) => ({
+        ...p,
+        order: idx,
+      }));
+
+      // Guardar en Firestore
+      await Promise.all(
+        newGroupWithOrder.map((p) =>
+          updateDoc(doc(db, "products", p.id), { order: p.order })
+        )
       );
-    } catch (err) {
-      console.error("Error cambiando orden:", err);
-      alert("❌ No se pudo cambiar el orden");
+
+      // Actualizar estado local
+      setProducts((prev) =>
+        prev.map((p) => {
+          const updated = newGroupWithOrder.find((g) => g.id === p.id);
+          return updated ? { ...p, order: updated.order } : p;
+        })
+      );
+    } catch (e) {
+      console.error("Error al cambiar orden:", e);
+      alert("Error al cambiar orden: " + (e.message || e));
     }
+  };
+
+  // Subir lista de data/products.js
+  const handleUploadProducts = async () => {
+    try {
+      setUploading(true);
+      const added = await uploadProducts();
+      alert(
+        added > 0
+          ? `${added} productos nuevos subidos`
+          : "No había productos nuevos para subir"
+      );
+      await fetchProducts();
+    } catch (e) {
+      console.error("Error en uploadProducts:", e);
+      alert("Error al subir lista de productos: " + (e.message || e));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Cuando se guarda un producto desde EditProduct
+  const handleUpdated = (updated) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p))
+    );
+    setEditingProduct(null);
   };
 
   if (loading) return <p>Cargando productos...</p>;
 
-  const generalProducts = products.filter((p) => !p.extra);
-  const extraProducts = products.filter((p) => p.extra);
+  const general = products.filter((p) => !p.extra).sort(sortByOrder);
+  const extra = products.filter((p) => p.extra).sort(sortByOrder);
 
-  const renderRow = (prod) => (
+  const renderRow = (prod, idx, groupLength) => (
     <tr key={prod.id} className="text-center">
-      <td className="p-2 border">{prod.name}</td>
-      <td className="p-2 border">{prod.available ? "✅" : "❌"}</td>
-
-      <td className="p-2 border">
-        {typeof prod.order === "number" ? prod.order : "—"}
+      <td className="border p-2 text-left">{prod.name ?? "—"}</td>
+      <td className="border p-2">
+        {typeof prod.price === "number" ? `$${prod.price}` : "—"}
+      </td>
+      <td className="border p-2">
+        {prod.available === false ? "❌" : "✅"}
       </td>
 
-      <td className="p-2 border space-x-2">
+      <td className="border p-2">
         <button
-          className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          onClick={() => changeOrder(prod, "up")}
+          className="px-2 border rounded mr-1 disabled:opacity-40"
+          disabled={idx === 0}
+          onClick={() => moveProduct(prod, "up")}
+          title="Subir"
         >
           ↑
         </button>
         <button
-          className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          onClick={() => changeOrder(prod, "down")}
+          className="px-2 border rounded disabled:opacity-40"
+          disabled={idx === groupLength - 1}
+          onClick={() => moveProduct(prod, "down")}
+          title="Bajar"
         >
           ↓
         </button>
       </td>
 
-      <td className="p-2 border space-x-2">
+      <td className="border p-2 space-x-1">
         <button
-          className="px-3 py-1 bg-blue-500 text-white rounded"
-          onClick={() => toggleAvailable(prod.id, prod.available)}
+          className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+          onClick={() => toggleAvailable(prod)}
         >
           Disponibilidad
         </button>
 
         <button
-          className="px-3 py-1 bg-amber-500 text-white rounded"
+          className="px-2 py-1 bg-orange-500 text-white rounded text-xs"
           onClick={() => setEditingProduct(prod)}
         >
           Editar
         </button>
 
         <button
-          className="px-3 py-1 bg-red-600 text-white rounded"
+          className="px-2 py-1 bg-red-600 text-white rounded text-xs"
           onClick={() => deleteProduct(prod)}
         >
           Eliminar
@@ -162,62 +239,75 @@ export default function AdminProducts() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Administrar Productos</h1>
+    <div className="max-w-4xl mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Admin de productos</h1>
 
+      {/* PANEL DE EDICIÓN */}
       {editingProduct && (
         <EditProduct
           product={editingProduct}
-          onSaved={(updated) => {
-            setProducts((prev) =>
-              prev
-                .map((p) => (p.id === updated.id ? updated : p))
-                .sort(sortByOrder)
-            );
-            setEditingProduct(null);
-          }}
+          onSaved={handleUpdated}
           onCancel={() => setEditingProduct(null)}
         />
       )}
 
-      <UploadProducts onProductAdded={fetchProducts} />
+      {/* BOTÓN PARA MOSTRAR/OCULTAR PANEL DE AGREGAR */}
+      <div className="mb-4 flex items-center gap-2">
+        <button
+          onClick={() => setShowAddPanel((prev) => !prev)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded"
+        >
+          {showAddPanel
+            ? "Cerrar panel de nuevo producto"
+            : "Agregar producto nuevo"}
+        </button>
 
-      <div className="mb-4">
         <button
           onClick={handleUploadProducts}
           disabled={uploading}
-          className="px-4 py-2 bg-green-600 text-white rounded"
+          className="px-4 py-2 bg-green-600 text-white rounded disabled:bg-gray-500"
         >
-          {uploading ? "Subiendo..." : "Subir lista completa"}
+          {uploading ? "Subiendo lista..." : "Subir lista completa"}
         </button>
       </div>
 
-      <h2 className="text-xl font-semibold mb-2">Productos Generales</h2>
-      <table className="w-full border mb-6 text-sm">
+      {/* PANEL DESPLEGABLE DE NUEVO PRODUCTO */}
+      {showAddPanel && (
+        <div className="mb-6">
+          <UploadProducts onProductAdded={fetchProducts} />
+        </div>
+      )}
+
+      <h2 className="text-xl font-semibold mt-2 mb-2">Lista General</h2>
+      <table className="w-full text-sm border mb-6">
         <thead>
           <tr className="bg-gray-200">
-            <th className="p-2 border">Nombre</th>
+            <th className="p-2 border text-left">Nombre</th>
+            <th className="p-2 border">Precio</th>
             <th className="p-2 border">Disp.</th>
             <th className="p-2 border">Orden</th>
-            <th className="p-2 border">Mover</th>
             <th className="p-2 border">Acciones</th>
           </tr>
         </thead>
-        <tbody>{generalProducts.map(renderRow)}</tbody>
+        <tbody>
+          {general.map((p, i) => renderRow(p, i, general.length))}
+        </tbody>
       </table>
 
-      <h2 className="text-xl font-semibold mb-2">Productos Extra</h2>
-      <table className="w-full border text-sm">
+      <h2 className="text-xl font-semibold mt-2 mb-2">Productos Extra</h2>
+      <table className="w-full text-sm border">
         <thead>
           <tr className="bg-gray-200">
-            <th className="p-2 border">Nombre</th>
+            <th className="p-2 border text-left">Nombre</th>
+            <th className="p-2 border">Precio</th>
             <th className="p-2 border">Disp.</th>
             <th className="p-2 border">Orden</th>
-            <th className="p-2 border">Mover</th>
             <th className="p-2 border">Acciones</th>
           </tr>
         </thead>
-        <tbody>{extraProducts.map(renderRow)}</tbody>
+        <tbody>
+          {extra.map((p, i) => renderRow(p, i, extra.length))}
+        </tbody>
       </table>
     </div>
   );
