@@ -88,12 +88,14 @@ export default function Admin() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4 text-center">
+<h1 style={{ color: "red" }}>PRUEBA ADMIN</h1>
+
+      <h1 className="text-2xl font-bold mb-6 text-center">
         Administrar Productos
       </h1>
 
       {/* Botón subir productos */}
-      <div className="mb-6 text-center">
+      <div className="mb-8 text-center">
         <button
           onClick={handleUpload}
           disabled={uploading}
@@ -105,35 +107,41 @@ export default function Admin() {
         </button>
       </div>
 
-      {/* Tabla productos */}
-      <table className="w-full border mb-10">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="p-2 border">Nombre</th>
-            <th className="p-2 border">Disponible</th>
-            <th className="p-2 border">Acción</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((prod) => (
-            <tr key={prod.id} className="text-center">
-              <td className="p-2 border">{prod.name}</td>
-              <td className="p-2 border">{prod.available ? "✅" : "❌"}</td>
-              <td className="p-2 border">
-                <button
-                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  onClick={() => toggleAvailable(prod.id, prod.available)}
-                >
-                  Cambiar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* ✅ TABLA CON FONDO TRANSLÚCIDO PREMIUM */}
+      <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-white/20 mb-10">
 
-      {/* 🔥 ESTADÍSTICAS SEMANALES */}
-      <div className="p-4 bg-gray-50 border rounded-xl shadow">
+        <table className="w-full border">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="p-2 border">Nombre</th>
+              <th className="p-2 border">Disponible</th>
+              <th className="p-2 border">Acción</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {products.map((prod) => (
+              <tr key={prod.id} className="text-center">
+                <td className="p-2 border">{prod.name}</td>
+                <td className="p-2 border">{prod.available ? "✅" : "❌"}</td>
+                <td className="p-2 border">
+                  <button
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    onClick={() => toggleAvailable(prod.id, prod.available)}
+                  >
+                    Cambiar
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+
+        </table>
+
+      </div>
+
+      {/* 🔥 ESTADÍSTICAS SEMANALES CON ESTILO PREMIUM */}
+      <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-white/20">
         <h2 className="text-xl font-bold mb-3 text-center">
           📅 Estadísticas Semanales
         </h2>
@@ -159,6 +167,7 @@ export default function Admin() {
               <th className="p-2 border">Cantidad</th>
             </tr>
           </thead>
+
           <tbody>
             {weekly.products.length === 0 && (
               <tr>
@@ -177,6 +186,7 @@ export default function Admin() {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 }

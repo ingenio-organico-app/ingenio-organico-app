@@ -39,7 +39,7 @@ export default function AdminProducts() {
         const data = d.data();
         return {
           ...data,
-          id: d.id,                    // SIEMPRE el id real del documento
+          id: d.id, // id real del documento
           originalId: data.id ?? null, // opcional, id viejo numérico si existía
         };
       });
@@ -104,7 +104,6 @@ export default function AdminProducts() {
   };
 
   // Mover producto arriba/abajo dentro de su grupo (general/extra)
-  // Recalcula el "order" de TODO el grupo para que no haya 999999 mezclados.
   const moveProduct = async (prod, direction) => {
     try {
       const isExtra = !!prod.extra;
@@ -252,7 +251,7 @@ export default function AdminProducts() {
       )}
 
       {/* BOTÓN PARA MOSTRAR/OCULTAR PANEL DE AGREGAR */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <button
           onClick={() => setShowAddPanel((prev) => !prev)}
           className="px-4 py-2 bg-indigo-600 text-white rounded"
@@ -278,37 +277,43 @@ export default function AdminProducts() {
         </div>
       )}
 
+      {/* LISTA GENERAL CON FONDO TRANSLÚCIDO */}
       <h2 className="text-xl font-semibold mt-2 mb-2">Lista General</h2>
-      <table className="w-full text-sm border mb-6">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="p-2 border text-left">Nombre</th>
-            <th className="p-2 border">Precio</th>
-            <th className="p-2 border">Disp.</th>
-            <th className="p-2 border">Orden</th>
-            <th className="p-2 border">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {general.map((p, i) => renderRow(p, i, general.length))}
-        </tbody>
-      </table>
+      <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-white/20 mb-6">
+        <table className="w-full text-sm border">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="p-2 border text-left">Nombre</th>
+              <th className="p-2 border">Precio</th>
+              <th className="p-2 border">Disp.</th>
+              <th className="p-2 border">Orden</th>
+              <th className="p-2 border">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {general.map((p, i) => renderRow(p, i, general.length))}
+          </tbody>
+        </table>
+      </div>
 
+      {/* PRODUCTOS EXTRA CON FONDO TRANSLÚCIDO */}
       <h2 className="text-xl font-semibold mt-2 mb-2">Productos Extra</h2>
-      <table className="w-full text-sm border">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="p-2 border text-left">Nombre</th>
-            <th className="p-2 border">Precio</th>
-            <th className="p-2 border">Disp.</th>
-            <th className="p-2 border">Orden</th>
-            <th className="p-2 border">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {extra.map((p, i) => renderRow(p, i, extra.length))}
-        </tbody>
-      </table>
+      <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-white/20">
+        <table className="w-full text-sm border">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="p-2 border text-left">Nombre</th>
+              <th className="p-2 border">Precio</th>
+              <th className="p-2 border">Disp.</th>
+              <th className="p-2 border">Orden</th>
+              <th className="p-2 border">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {extra.map((p, i) => renderRow(p, i, extra.length))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

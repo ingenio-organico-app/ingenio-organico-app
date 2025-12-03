@@ -63,9 +63,9 @@ export default function Store() {
   const message = `Hola! Te paso mi pedido:\n\n${cart
     .map(
       (item) =>
-        `• ${item.name} x ${item.qty}${item.weighed ? " (🟰 a pesar)" : ""}${
-          item.extra ? " (EXTRA)" : ""
-        }`
+        `• ${item.name} x ${item.qty}${
+          item.weighed ? " (🟰 a pesar)" : ""
+        }${item.extra ? " (EXTRA)" : ""}`
     )
     .join(
       "\n"
@@ -141,28 +141,27 @@ export default function Store() {
     <div className="min-h-screen py-6">
       <div className="max-w-4xl mx-auto p-4">
 
-        {/* HEADER PREMIUM: logo + sublogo dentro de un bloque suave */}
-        <div className="rounded-3xl bg-white/40 backdrop-blur-sm ...">
-
-
+        {/* HEADER PREMIUM */}
+        <div className="rounded-3xl bg-white/40 backdrop-blur-sm border border-white/20 py-8 mb-10">
           <div className="flex flex-col items-center">
-            {/* Logo (ya agrandado +15%) */}
+
+            {/* Logo (igual tamaño) */}
             <img
               src="/images/logo.png"
               alt="Ingenio Orgánico"
               className="w-[483px] mb-4"
             />
 
-            {/* Sublogo (+15% extra) */}
+            {/* Sublogo (15% más chico → 424px → 360px) */}
             <img
               src="/images/sublogo.png"
               alt="La Tienda"
-              className="w-[424px] mb-10"
+              className="w-[360px]"
             />
           </div>
         </div>
 
-        {/* LISTA GENERAL — título imagen + línea */}
+        {/* LISTA GENERAL — imagen + línea */}
         <div className="flex items-center gap-3 mb-3 ml-[6px]">
           <img
             src="/images/lista-general.png"
@@ -177,7 +176,7 @@ export default function Store() {
           {generalProducts.map(renderCard)}
         </div>
 
-        {/* PRODUCTOS EXTRA — título imagen + línea */}
+        {/* PRODUCTOS EXTRA — título */}
         <div className="flex items-center gap-3 mt-8 mb-3 ml-[6px]">
           <img
             src="/images/productos-extra.png"
@@ -192,19 +191,19 @@ export default function Store() {
           {extraProducts.map(renderCard)}
         </div>
 
-        {/* Si más adelante querés el carrito visible, se puede descomentar esto */}
-        {/*
+        {/* CARRITO PREMIUM (ya no está comentado) */}
         {cart.length > 0 && (
-          <div className="mt-8 p-4 bg-white rounded-2xl shadow-md border border-gray-200">
-            <h2 className="text-xl font-semibold mb-3">Tu pedido</h2>
+          <div className="mt-10 p-5 bg-white/40 backdrop-blur-md border border-white/30 rounded-3xl shadow-md">
+            <h2 className="text-xl font-semibold mb-3 text-center">Tu pedido</h2>
 
             {cart.map((item) => (
               <div
                 key={item.id}
-                className="flex justify-between items-center mb-1 text-sm"
+                className="flex justify-between items-center mb-2 text-sm"
               >
                 <span>
-                  {item.name} x {item.qty} {item.weighed && "(a pesar)"}
+                  {item.name} x {item.qty}
+                  {item.weighed && " (a pesar)"}
                   {item.extra && " (EXTRA)"}
                 </span>
 
@@ -217,7 +216,7 @@ export default function Store() {
               </div>
             ))}
 
-            <p className="mt-3 font-semibold text-sm">Subtotal: ${subtotal}</p>
+            <p className="mt-4 font-semibold text-sm">Subtotal: ${subtotal}</p>
             <p className="text-sm">Envío: ${envio}</p>
             <p className="mt-1 font-bold text-sm">{totalText}</p>
 
@@ -228,7 +227,6 @@ export default function Store() {
             </a>
           </div>
         )}
-        */}
       </div>
     </div>
   );
