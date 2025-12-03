@@ -1,7 +1,7 @@
 @import "tailwindcss";
 /* Fondo general */
 body {
-  background-image: url("/images/background.png");
+  background-image: url("/images/background2.png");
   background-attachment: fixed;   /* se queda quieto al scrollear */
   background-size: cover;         /* cubre toda la pantalla */
   background-position: center;
