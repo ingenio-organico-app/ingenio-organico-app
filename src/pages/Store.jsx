@@ -8,28 +8,22 @@ export default function Store() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Cargar productos desde Firestore
+  // Cargar productos
   useEffect(() => {
     async function loadProducts() {
       try {
-        const colRef = collection(db, "products");
-        const snap = await getDocs(colRef);
-
+        const snap = await getDocs(collection(db, "products"));
         const list = snap.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
           .filter((p) => p.available !== false);
 
         setProducts(list);
-      } catch (error) {
-        console.error("Error cargando productos en Store:", error);
+      } catch (err) {
+        console.error("Error:", err);
       } finally {
         setLoading(false);
       }
     }
-
     loadProducts();
   }, []);
 
@@ -37,9 +31,7 @@ export default function Store() {
     setCart((prev) => {
       const exists = prev.find((i) => i.id === id);
 
-      if (!exists && delta > 0) {
-        return [...prev, { ...prod, qty: 1 }];
-      }
+      if (!exists && delta > 0) return [...prev, { ...prod, qty: 1 }];
 
       return prev
         .map((item) =>
@@ -71,23 +63,21 @@ export default function Store() {
   const message = `Hola! Te paso mi pedido:\n\n${cart
     .map(
       (item) =>
-        `• ${item.name} x ${item.qty}${
-          item.weighed ? " (🟰 a pesar)" : ""
-        }${item.extra ? " (EXTRA)" : ""}`
+        `• ${item.name} x ${item.qty}${item.weighed ? " (🟰 a pesar)" : ""}${
+          item.extra ? " (EXTRA)" : ""
+        }`
     )
-    .join("\n")}\n\n--------------------\nSubtotal: $${subtotal}\nEnvío: $${envio}\n${totalText}`;
+    .join(
+      "\n"
+    )}\n\n--------------------\nSubtotal: $${subtotal}\nEnvío: $${envio}\n${totalText}`;
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
   if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto p-4">
-        <p className="text-center mt-10 text-xl">Cargando productos...</p>
-      </div>
-    );
+    return <p className="text-center mt-10">Cargando productos...</p>;
   }
 
-  // Orden
+  // Ordenar productos
   const sortByOrder = (a, b) => {
     const ao = typeof a.order === "number" ? a.order : 999999;
     const bo = typeof b.order === "number" ? b.order : 999999;
@@ -98,24 +88,22 @@ export default function Store() {
   const generalProducts = products.filter((p) => !p.extra).sort(sortByOrder);
   const extraProducts = products.filter((p) => p.extra).sort(sortByOrder);
 
-  // Tarjeta de producto
   const renderCard = (prod) => (
     <div
       key={prod.id}
-      className="p-3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col items-center text-center"
+      className="p-3 bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col items-center text-center transition transform hover:-translate-y-0.5 hover:shadow-md hover:border-emerald-200"
     >
-      {/* IMAGEN */}
       {prod.image ? (
         <img
           src={prod.image}
           alt={prod.name}
-          className="h-16 w-16 object-cover rounded mb-1"
+          className="h-16 w-16 object-cover rounded mb-2"
         />
       ) : (
-        <span className="text-5xl mb-1">🥬</span>
+        <span className="text-5xl mb-2">🥬</span>
       )}
 
-      <h3 className="font-semibold text-sm leading-tight">{prod.name}</h3>
+      <h3 className="font-semibold text-sm">{prod.name}</h3>
 
       {prod.price && prod.unit && (
         <p className="text-gray-600 text-xs mb-1">
@@ -127,21 +115,20 @@ export default function Store() {
         <p className="text-[10px] text-orange-600 mb-1">A pesar</p>
       )}
 
-      {/* Controles */}
-      <div className="flex items-center gap-2 mt-auto mb-1">
+      <div className="flex items-center gap-2 mt-auto">
         <button
-          className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90 text-sm"
+          className="px-2 py-1 bg-gray-200 rounded-md text-sm"
           onClick={() => updateQty(prod.id, -1, prod)}
         >
           -
         </button>
 
-        <span className="w-5 text-center font-bold text-sm">
+        <span className="w-6 text-center font-bold">
           {cart.find((i) => i.id === prod.id)?.qty || 0}
         </span>
 
         <button
-          className="px-2 py-1 bg-gray-200 rounded-lg active:scale-90 text-sm"
+          className="px-2 py-1 bg-gray-200 rounded-md text-sm"
           onClick={() => updateQty(prod.id, 1, prod)}
         >
           +
@@ -151,87 +138,96 @@ export default function Store() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="min-h-screen py-6">
+      <div className="max-w-4xl mx-auto p-4">
 
-      {/* LOGO */}
-      <div className="flex justify-center mb-4">
-        <img src="/logo.png" className="w-64" alt="Ingenio Orgánico" />
-      </div>
+        {/* HEADER PREMIUM: logo + sublogo dentro de un bloque suave */}
+        <div className="rounded-3xl bg-white/40 shadow-sm border border-emerald-50 px-6 pt-6 pb-4 mb-6">
+          <div className="flex flex-col items-center">
+            {/* Logo (ya agrandado +15%) */}
+            <img
+              src="/images/logo.png"
+              alt="Ingenio Orgánico"
+              className="w-[483px] mb-4"
+            />
 
-      {/* SUBLOGO */}
-      <div className="flex justify-center mb-8">
-        <img src="/sublogo.png" className="w-48" alt="La Tienda" />
-      </div>
-
-      {/* LISTA GENERAL */}
-      <div className="mb-6">
-        <img src="/listaGeneral.png" className="w-40 mb-3" alt="Lista General" />
-
-        {generalProducts.length === 0 ? (
-          <p className="text-sm text-gray-600">
-            No hay productos generales disponibles.
-          </p>
-        ) : (
-          <div className="grid grid-cols-3 gap-3">
-            {generalProducts.map(renderCard)}
+            {/* Sublogo (+15% extra) */}
+            <img
+              src="/images/sublogo.png"
+              alt="La Tienda"
+              className="w-[424px] mb-10"
+            />
           </div>
-        )}
-      </div>
-
-      {/* PRODUCTOS EXTRA */}
-      <div className="mb-6">
-        <img
-          src="/productosExtra.png"
-          className="w-52 mb-3"
-          alt="Productos Extra"
-        />
-
-        {extraProducts.length === 0 ? (
-          <p className="text-sm text-gray-600">
-            No hay productos extra disponibles.
-          </p>
-        ) : (
-          <div className="grid grid-cols-3 gap-3">
-            {extraProducts.map(renderCard)}
-          </div>
-        )}
-      </div>
-
-      {/* CARRITO */}
-      {cart.length > 0 && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-xl shadow">
-          <h2 className="text-2xl font-semibold mb-3">Tu pedido:</h2>
-
-          {cart.map((item) => (
-            <div
-              key={item.id}
-              className="flex justify-between items-center mb-1"
-            >
-              <span>
-                {item.name} x {item.qty} {item.weighed && "(a pesar)"}
-                {item.extra && " (EXTRA)"}
-              </span>
-
-              <button
-                className="text-red-500 hover:text-red-700"
-                onClick={() => removeItem(item.id)}
-              >
-                ❌
-              </button>
-            </div>
-          ))}
-
-          <p className="mt-4 font-semibold">Subtotal: ${subtotal}</p>
-          <p>Envío: ${envio}</p>
-          <p className="mt-2 font-bold">{totalText}</p>
-
-          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-            <button className="mt-4 w-full py-2 bg-green-500 text-white rounded hover:bg-green-600">
-              Enviar pedido por WhatsApp
-            </button>
-          </a>
         </div>
-      )}
+
+        {/* LISTA GENERAL — título imagen + línea */}
+        <div className="flex items-center gap-3 mb-3 ml-[6px]">
+          <img
+            src="/images/lista-general.png"
+            alt="Lista General"
+            className="w-[322px]"
+          />
+          <div className="h-[1px] flex-1 bg-gray-300 rounded-full" />
+        </div>
+
+        {/* Productos lista general */}
+        <div className="grid grid-cols-3 gap-3 mb-10">
+          {generalProducts.map(renderCard)}
+        </div>
+
+        {/* PRODUCTOS EXTRA — título imagen + línea */}
+        <div className="flex items-center gap-3 mt-8 mb-3 ml-[6px]">
+          <img
+            src="/images/productos-extra.png"
+            alt="Productos Extra"
+            className="w-[368px]"
+          />
+          <div className="h-[1px] flex-1 bg-gray-300 rounded-full" />
+        </div>
+
+        {/* Productos extra */}
+        <div className="grid grid-cols-3 gap-3">
+          {extraProducts.map(renderCard)}
+        </div>
+
+        {/* Si más adelante querés el carrito visible, se puede descomentar esto */}
+        {/*
+        {cart.length > 0 && (
+          <div className="mt-8 p-4 bg-white rounded-2xl shadow-md border border-gray-200">
+            <h2 className="text-xl font-semibold mb-3">Tu pedido</h2>
+
+            {cart.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between items-center mb-1 text-sm"
+              >
+                <span>
+                  {item.name} x {item.qty} {item.weighed && "(a pesar)"}
+                  {item.extra && " (EXTRA)"}
+                </span>
+
+                <button
+                  className="text-red-500 hover:text-red-600 text-xs"
+                  onClick={() => removeItem(item.id)}
+                >
+                  ❌
+                </button>
+              </div>
+            ))}
+
+            <p className="mt-3 font-semibold text-sm">Subtotal: ${subtotal}</p>
+            <p className="text-sm">Envío: ${envio}</p>
+            <p className="mt-1 font-bold text-sm">{totalText}</p>
+
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+              <button className="mt-4 w-full py-2 bg-emerald-500 text-white rounded-xl text-sm font-semibold hover:bg-emerald-600 transition">
+                Enviar pedido por WhatsApp
+              </button>
+            </a>
+          </div>
+        )}
+        */}
+      </div>
     </div>
   );
 }
