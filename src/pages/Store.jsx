@@ -156,7 +156,7 @@ export default function Store() {
             <img
               src="/images/sublogo.png"
               alt="La Tienda"
-              className="w-[360px]"
+              className="w-[300px]"
             />
           </div>
         </div>
