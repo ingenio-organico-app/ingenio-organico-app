@@ -6,6 +6,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function EditProduct({ product, onSaved, onCancel }) {
   const [name, setName] = useState(product?.name || "");
+  const [unit, setUnit] = useState(product.unit || "");
+const [gramAmount, setGramAmount] = useState(product.gramAmount || "");
   const [extra, setExtra] = useState(!!product?.extra);
   const [weighed, setWeighed] = useState(!!product?.weighed); // producto pesable
   const [price, setPrice] = useState(
@@ -33,10 +35,14 @@ export default function EditProduct({ product, onSaved, onCancel }) {
 
     try {
       const updates = {
-        name,
-        extra,
-        weighed,
-      };
+  name,
+  price,
+  unit,
+  extra,
+  weighed,
+  gramAmount: unit === "gr" ? Number(gramAmount) : null,
+};
+
 
       // Precio numérico
       const numericPrice = Number(price);
@@ -99,6 +105,34 @@ export default function EditProduct({ product, onSaved, onCancel }) {
             required
           />
         </div>
+
+       {/* Unidad */}
+        <div className="mb-3">
+  <label className="block text-sm font-medium mb-1">Unidad</label>
+  <select
+    value={unit}
+    onChange={(e) => setUnit(e.target.value)}
+    className="border p-2 rounded w-full"
+  >
+    <option value="">Seleccionar unidad</option>
+    <option value="unidad">Unidad</option>
+    <option value="atado">Atado</option>
+    <option value="gr">Gramos (gr)</option>
+    <option value="kg">Kilos (kg)</option>
+  </select>
+</div>
+{unit === "gr" && (
+  <div className="mb-3">
+    <label className="block text-sm font-medium mb-1">Cantidad de gramos</label>
+    <input
+      type="number"
+      value={gramAmount}
+      onChange={(e) => setGramAmount(e.target.value)}
+      className="border p-2 rounded w-full"
+    />
+  </div>
+)}
+
 
         {/* Extra / Pesable */}
         <div className="flex flex-col gap-1">

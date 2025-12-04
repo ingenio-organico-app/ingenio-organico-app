@@ -9,6 +9,8 @@ export default function UploadProducts({ onProductAdded }) {
   const [extra, setExtra] = useState(false);
   const [weighed, setWeighed] = useState(false); // producto pesable
   const [price, setPrice] = useState("");
+  const [unit, setUnit] = useState("");
+  const [gramAmount, setGramAmount] = useState(""); // 👈 NUEVO
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -47,6 +49,8 @@ export default function UploadProducts({ onProductAdded }) {
       setExtra(false);
       setWeighed(false);
       setPrice("");
+      setUnit("");
+      gramAmount: unit === "gr" ? Number(gramAmount) : null; 
       setImageFile(null);
 
       if (onProductAdded) onProductAdded();
@@ -90,6 +94,36 @@ export default function UploadProducts({ onProductAdded }) {
             required
           />
         </div>
+ {/* Unidad */}
+// Dentro del form de agregar producto → AGREGAR ESTE CAMPO:
+
+<div className="mb-3">
+  <label className="block text-sm font-medium mb-1">Unidad</label>
+  <select
+    value={unit}
+    onChange={(e) => setUnit(e.target.value)}
+    className="border p-2 rounded w-full"
+  >
+    <option value="">Seleccionar unidad</option>
+    <option value="unidad">Unidad</option>
+    <option value="atado">Atado</option>
+    <option value="gr">Gramos (gr)</option>
+    <option value="kg">Kilos (kg)</option>
+  </select>
+</div>
+{unit === "gr" && (
+  <div className="mb-3">
+    <label className="block text-sm font-medium mb-1">Cantidad de gramos</label>
+    <input
+      type="number"
+      value={gramAmount}
+      onChange={(e) => setGramAmount(e.target.value)}
+      className="border p-2 rounded w-full"
+      placeholder="Ej: 250"
+    />
+  </div>
+)}
+
 
         {/* Extra / Pesable */}
         <div className="flex flex-col gap-1">

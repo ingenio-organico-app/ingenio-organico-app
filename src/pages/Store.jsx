@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase/firebase";
 import { collection, getDocs } from "firebase/firestore";
+import { saveOrder } from "../firebase/orders";
 
 export default function Store() {
   const [products, setProducts] = useState([]);
@@ -73,6 +74,30 @@ export default function Store() {
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
+  // 🔥 Guardar pedido y luego abrir WhatsApp
+  const handleSendOrder = async () => {
+    if (cart.length === 0) return;
+
+    try {
+      console.log("saveOrder llamado con:", { cart, subtotal, envio });
+      await saveOrder({
+        cart,
+        subtotal,
+        envio,
+        customerName: "", // luego lo editás en el admin
+      });
+      console.log("Pedido guardado en Firestore ✔");
+
+      // Abrir WhatsApp DESPUÉS de guardar
+      window.open(whatsappUrl, "_blank");
+    } catch (err) {
+      console.error("Error guardando pedido:", err);
+      alert("No se pudo guardar el pedido 😕");
+      // Si igual querés abrir WhatsApp aunque falle el guardado:
+      window.open(whatsappUrl, "_blank");
+    }
+  };
+
   if (loading) {
     return <p className="text-center mt-10">Cargando productos...</p>;
   }
@@ -140,19 +165,14 @@ export default function Store() {
   return (
     <div className="min-h-screen py-6">
       <div className="max-w-4xl mx-auto p-4">
-
         {/* HEADER PREMIUM */}
         <div className="rounded-3xl bg-white/40 backdrop-blur-sm border border-white/20 py-8 mb-10">
           <div className="flex flex-col items-center">
-
-            {/* Logo (igual tamaño) */}
             <img
               src="/images/logo.png"
               alt="Ingenio Orgánico"
               className="w-[483px] mb-4"
             />
-
-            {/* Sublogo (15% más chico → 424px → 360px) */}
             <img
               src="/images/sublogo.png"
               alt="La Tienda"
@@ -161,7 +181,7 @@ export default function Store() {
           </div>
         </div>
 
-        {/* LISTA GENERAL — imagen + línea */}
+        {/* LISTA GENERAL */}
         <div className="flex items-center gap-3 mb-3 ml-[6px]">
           <img
             src="/images/lista-general.png"
@@ -171,12 +191,11 @@ export default function Store() {
           <div className="h-[1px] flex-1 bg-gray-300 rounded-full" />
         </div>
 
-        {/* Productos lista general */}
         <div className="grid grid-cols-3 gap-3 mb-10">
           {generalProducts.map(renderCard)}
         </div>
 
-        {/* PRODUCTOS EXTRA — título */}
+        {/* PRODUCTOS EXTRA */}
         <div className="flex items-center gap-3 mt-8 mb-3 ml-[6px]">
           <img
             src="/images/productos-extra.png"
@@ -186,15 +205,16 @@ export default function Store() {
           <div className="h-[1px] flex-1 bg-gray-300 rounded-full" />
         </div>
 
-        {/* Productos extra */}
         <div className="grid grid-cols-3 gap-3">
           {extraProducts.map(renderCard)}
         </div>
 
-        {/* CARRITO PREMIUM (ya no está comentado) */}
+        {/* CARRITO */}
         {cart.length > 0 && (
           <div className="mt-10 p-5 bg-white/40 backdrop-blur-md border border-white/30 rounded-3xl shadow-md">
-            <h2 className="text-xl font-semibold mb-3 text-center">Tu pedido</h2>
+            <h2 className="text-xl font-semibold mb-3 text-center">
+              Tu pedido
+            </h2>
 
             {cart.map((item) => (
               <div
@@ -220,11 +240,13 @@ export default function Store() {
             <p className="text-sm">Envío: ${envio}</p>
             <p className="mt-1 font-bold text-sm">{totalText}</p>
 
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-              <button className="mt-4 w-full py-2 bg-emerald-500 text-white rounded-xl text-sm font-semibold hover:bg-emerald-600 transition">
-                Enviar pedido por WhatsApp
-              </button>
-            </a>
+            {/* Botón que guarda y luego abre WhatsApp */}
+            <button
+              onClick={handleSendOrder}
+              className="mt-4 w-full py-2 bg-emerald-500 text-white rounded-xl text-sm font-semibold hover:bg-emerald-600 transition"
+            >
+              Enviar pedido por WhatsApp
+            </button>
           </div>
         )}
       </div>

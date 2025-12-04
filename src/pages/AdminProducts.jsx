@@ -230,6 +230,7 @@ export default function AdminProducts() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
+
       <h1 className="text-2xl font-bold mb-4">Admin de productos</h1>
 
       {/* PANEL DE EDICIÓN */}
@@ -244,7 +245,7 @@ export default function AdminProducts() {
       {/* BOTONES PRINCIPALES */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
 
-        {/* 🔥 NUEVO BOTÓN A STATS */}
+        {/* 🔥 Nuevo botón + directo a estadísticas */}
         <Link
           to="/stats"
           className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
@@ -252,15 +253,23 @@ export default function AdminProducts() {
           Ver estadísticas
         </Link>
 
+        {/* Botón para volver a la tienda */}
+        <Link
+          to="/"
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Ir a la tienda
+        </Link>
+
+        {/* Botón para agregar producto */}
         <button
           onClick={() => setShowAddPanel((prev) => !prev)}
           className="px-4 py-2 bg-indigo-600 text-white rounded"
         >
-          {showAddPanel
-            ? "Cerrar panel de nuevo producto"
-            : "Agregar producto nuevo"}
+          {showAddPanel ? "Cerrar panel" : "Agregar producto nuevo"}
         </button>
 
+        {/* Botón subir lista */}
         <button
           onClick={handleUploadProducts}
           disabled={uploading}
@@ -314,6 +323,7 @@ export default function AdminProducts() {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 }
