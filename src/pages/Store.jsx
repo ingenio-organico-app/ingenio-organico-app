@@ -114,57 +114,66 @@ export default function Store() {
   const extraProducts = products.filter((p) => p.extra).sort(sortByOrder);
 
   const renderCard = (prod) => (
-    <div
-      key={prod.id}
-      className="p-3 bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col items-center text-center transition transform hover:-translate-y-0.5 hover:shadow-md hover:border-emerald-200"
-    >
-      {prod.image ? (
-        <img
-          src={prod.image}
-          alt={prod.name}
-          className="h-16 w-16 object-cover rounded mb-2"
-        />
-      ) : (
-        <span className="text-5xl mb-2">🥬</span>
-      )}
+  <div
+    key={prod.id}
+    className="p-4 bg-white rounded-2xl shadow-md border border-gray-200 flex flex-col items-center text-center transition-all duration-200 active:scale-[0.98]"
+  >
+    {/* Imagen */}
+    {prod.image ? (
+      <img
+        src={prod.image}
+        alt={prod.name}
+        className="h-24 w-24 object-cover rounded-xl mb-3"
+      />
+    ) : (
+      <span className="text-5xl mb-3">🥬</span>
+    )}
 
-      <h3 className="font-semibold text-sm">{prod.name}</h3>
+    {/* Nombre */}
+    <h3 className="font-semibold text-base mb-1">{prod.name}</h3>
 
-     {prod.price && prod.unit && (
-  <p className="text-gray-600 text-xs mb-1">
-    {prod.unit === "gr" && prod.gramAmount
-      ? `$${prod.price} / ${prod.gramAmount}g`
-      : `$${prod.price} / ${prod.unit}`
-    }
-  </p>
-)}
+    {/* Precio */}
+    <p className="text-gray-700 text-sm mb-2">
+      {prod.unit === "gr" && prod.gramAmount
+        ? `$${prod.price} / ${prod.gramAmount}g`
+        : `$${prod.price} / ${prod.unit}`}
+    </p>
 
+    {/* Badge si es extra o a pesar */}
+    {prod.extra && (
+      <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full mb-2">
+        EXTRA
+      </span>
+    )}
 
-      {prod.weighed && (
-        <p className="text-[10px] text-orange-600 mb-1">A pesar</p>
-      )}
+    {prod.weighed && (
+      <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full mb-2">
+        A pesar
+      </span>
+    )}
 
-      <div className="flex items-center gap-2 mt-auto">
-        <button
-          className="px-2 py-1 bg-gray-200 rounded-md text-sm"
-          onClick={() => updateQty(prod.id, -1, prod)}
-        >
-          -
-        </button>
+    {/* Botones */}
+    <div className="flex items-center gap-4 mt-auto">
+      <button
+        className="px-3 py-2 bg-gray-200 rounded-xl text-lg"
+        onClick={() => updateQty(prod.id, -1, prod)}
+      >
+        –
+      </button>
 
-        <span className="w-6 text-center font-bold">
-          {cart.find((i) => i.id === prod.id)?.qty || 0}
-        </span>
+      <span className="w-6 text-center font-bold">
+        {cart.find((i) => i.id === prod.id)?.qty || 0}
+      </span>
 
-        <button
-          className="px-2 py-1 bg-gray-200 rounded-md text-sm"
-          onClick={() => updateQty(prod.id, 1, prod)}
-        >
-          +
-        </button>
-      </div>
+      <button
+        className="px-3 py-2 bg-emerald-500 text-white rounded-xl text-lg"
+        onClick={() => updateQty(prod.id, 1, prod)}
+      >
+        +
+      </button>
     </div>
-  );
+  </div>
+);
 
   return (
     <div className="min-h-screen py-6">
