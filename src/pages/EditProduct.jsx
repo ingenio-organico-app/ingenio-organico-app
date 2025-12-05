@@ -40,6 +40,7 @@ const [gramAmount, setGramAmount] = useState(product.gramAmount || "");
   unit,
   extra,
   weighed,
+  available,
   gramAmount: unit === "gr" ? Number(gramAmount) : null,
 };
 
@@ -106,33 +107,36 @@ const [gramAmount, setGramAmount] = useState(product.gramAmount || "");
           />
         </div>
 
-       {/* Unidad */}
-        <div className="mb-3">
-  <label className="block text-sm font-medium mb-1">Unidad</label>
+      {/* Unidad */}
+<div className="mb-3">
+  <label className="font-semibold">Unidad</label>
   <select
     value={unit}
     onChange={(e) => setUnit(e.target.value)}
     className="border p-2 rounded w-full"
   >
-    <option value="">Seleccionar unidad</option>
+    <option value="">Seleccionar…</option>
     <option value="unidad">Unidad</option>
     <option value="atado">Atado</option>
-    <option value="gr">Gramos (gr)</option>
-    <option value="kg">Kilos (kg)</option>
+    <option value="kg">Kg</option>
+    <option value="gr">Gramos</option>
   </select>
 </div>
+
+{/* Si la unidad es gramos, pedir cantidad */}
 {unit === "gr" && (
   <div className="mb-3">
-    <label className="block text-sm font-medium mb-1">Cantidad de gramos</label>
+    <label className="font-semibold">Cantidad en gramos</label>
     <input
       type="number"
-      value={gramAmount}
-      onChange={(e) => setGramAmount(e.target.value)}
+      min="1"
+      value={gramAmount || ""}
+      onChange={(e) => setGramAmount(Number(e.target.value))}
       className="border p-2 rounded w-full"
+      placeholder="Ej: 250"
     />
   </div>
 )}
-
 
         {/* Extra / Pesable */}
         <div className="flex flex-col gap-1">

@@ -130,11 +130,15 @@ export default function Store() {
 
       <h3 className="font-semibold text-sm">{prod.name}</h3>
 
-      {prod.price && prod.unit && (
-        <p className="text-gray-600 text-xs mb-1">
-          ${prod.price} / {prod.unit}
-        </p>
-      )}
+     {prod.price && prod.unit && (
+  <p className="text-gray-600 text-xs mb-1">
+    {prod.unit === "gr" && prod.gramAmount
+      ? `$${prod.price} / ${prod.gramAmount}g`
+      : `$${prod.price} / ${prod.unit}`
+    }
+  </p>
+)}
+
 
       {prod.weighed && (
         <p className="text-[10px] text-orange-600 mb-1">A pesar</p>
