@@ -7,8 +7,17 @@ import {
   where,
   onSnapshot,
   getDocs,
+  updateDoc,
+  doc,
+  orderBy,
 } from "firebase/firestore";
 import { Link } from "react-router-dom";
+
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+} from "@hello-pangea/dnd";
 
 export default function Stats() {
   const [totals, setTotals] = useState([]);
@@ -16,7 +25,7 @@ export default function Stats() {
   const [weekId, setWeekId] = useState("");
   const [availableWeeks, setAvailableWeeks] = useState([]);
 
-  // 🔥 Obtener semana ISO
+  // Obtener semana ISO
   function getCurrentISOWeek() {
     const date = new Date();
     date.setDate(date.getDate() + 4 - (date.getDay() || 7));
@@ -37,12 +46,12 @@ export default function Stats() {
     setAvailableWeeks([...weeks].sort());
   };
 
-  // Cargar totales + pedidos de la semana
+  // Cargar pedidos + totales
   const loadWeekData = (wk) => {
     const q = query(
       collection(db, "orders"),
-      where("weekId", "==", wk)
-      // ❌ NUNCA orderBy ACA → rompe Firestore sin index
+      where("weekId", "==", wk),
+      orderBy("createdAt", "asc")
     );
 
     return onSnapshot(q, (snap) => {
@@ -66,7 +75,18 @@ export default function Stats() {
         });
       });
 
-      setOrders(allOrders);
+      // Ordenamos así:
+      // 👉 Primero manualOrder, después por createdAt
+      const sorted = [...allOrders].sort((a, b) => {
+        if (a.manualOrder == null && b.manualOrder != null) return 1;
+        if (a.manualOrder != null && b.manualOrder == null) return -1;
+        if (a.manualOrder != null && b.manualOrder != null)
+          return a.manualOrder - b.manualOrder;
+        return a.createdAt?.seconds - b.createdAt?.seconds;
+      });
+
+      setOrders(sorted);
+
       setTotals(
         Object.values(totalsMap).sort((a, b) =>
           a.name.localeCompare(b.name)
@@ -82,23 +102,37 @@ export default function Stats() {
     loadWeeks();
   }, []);
 
-  // Listener
   useEffect(() => {
     if (!weekId) return;
     const unsub = loadWeekData(weekId);
     return () => unsub();
   }, [weekId]);
 
-  // 📤 Enviar resumen semanal por WhatsApp
-  const sendWeeklySummary = () => {
-    const msg =
-      `Resumen semanal (${weekId}):\n\n` +
-      totals
-        .map((t) => `• ${t.name}: ${t.qty} ${t.unit || ""}`)
-        .join("\n");
+  // 🔥 GUARDAR NUEVO ORDEN EN FIRESTORE
+  const saveOrder = async (newOrders) => {
+    for (let i = 0; i < newOrders.length; i++) {
+      const o = newOrders[i];
+      try {
+        await updateDoc(doc(db, "orders", o.id), {
+          manualOrder: i + 1,
+        });
+      } catch (err) {
+        console.error("Error guardando orden:", err);
+      }
+    }
+  };
 
-    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank");
+  // Handler de Drag & Drop
+  const onDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const newList = Array.from(orders);
+    const [moved] = newList.splice(result.source.index, 1);
+    newList.splice(result.destination.index, 0, moved);
+
+    setOrders(newList);
+
+    await saveOrder(newList); // Guardar automáticamente
   };
 
   return (
@@ -148,34 +182,46 @@ export default function Stats() {
             ))}
           </tbody>
         </table>
-
-        <button
-          onClick={sendWeeklySummary}
-          className="mt-4 py-2 w-full bg-green-600 text-white rounded-lg"
-        >
-          Enviar resumen por WhatsApp
-        </button>
       </div>
 
-      {/* Pedidos */}
+      {/* 🔥 Pedidos con Drag & Drop */}
       <h2 className="text-xl font-semibold mb-2">Pedidos individuales</h2>
 
-      <div className="space-y-3">
-        {orders.map((o) => (
-          <Link
-            key={o.id}
-            to={`/stats/${o.id}`}
-            className="block p-3 bg-white border rounded-xl shadow-sm hover:shadow-md"
-          >
-            <div className="font-semibold">
-              Cliente: {o.customerName || "Sin nombre"}
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="orders">
+          {(provided) => (
+            <div
+              className="space-y-3"
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+            >
+              {orders.map((o, i) => (
+                <Draggable key={o.id} draggableId={o.id} index={i}>
+                  {(provided) => (
+                    <div
+                      className="p-3 bg-white border rounded-xl shadow-sm hover:shadow-md cursor-grab"
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                    >
+                      <Link to={`/week/${o.id}`}>
+                        <div className="font-semibold">
+                          Cliente: {o.customerName || "Sin nombre"}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {o.cart?.length || 0} productos — Total: ${o.total}
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+
+              {provided.placeholder}
             </div>
-            <div className="text-sm text-gray-600">
-              {o.cart?.length || 0} productos — Total: ${o.total}
-            </div>
-          </Link>
-        ))}
-      </div>
+          )}
+        </Droppable>
+      </DragDropContext>
     </div>
   );
 }

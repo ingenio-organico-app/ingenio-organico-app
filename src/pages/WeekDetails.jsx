@@ -1,83 +1,49 @@
 // src/pages/WeekDetails.jsx
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { db } from "../firebase/firebase";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { useParams, useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function WeekDetails() {
-  const { weekId } = useParams(); // en realidad acá recibimos el ID DEL PEDIDO
-  const navigate = useNavigate();
+  const { weekId } = useParams();
   const [order, setOrder] = useState(null);
-  const [customerName, setCustomerName] = useState("");
 
   useEffect(() => {
     async function load() {
-      const ref = doc(db, "orders", weekId);
-      const snap = await getDoc(ref);
-
-      if (!snap.exists()) return;
-      const data = snap.data();
-      setOrder({ id: snap.id, ...data });
-      setCustomerName(data.customerName || "");
+      const snap = await getDoc(doc(db, "orders", weekId));
+      if (snap.exists()) setOrder({ id: snap.id, ...snap.data() });
     }
     load();
   }, [weekId]);
 
-  const saveName = async () => {
-    await updateDoc(doc(db, "orders", weekId), {
-      customerName,
-    });
-    alert("Nombre actualizado ✔");
-  };
-
-  const deleteOrder = async () => {
-    if (!confirm("¿Eliminar este pedido?")) return;
-    await deleteDoc(doc(db, "orders", weekId));
-    alert("Pedido eliminado ✔");
-    navigate("/stats");
-  };
-
-  if (!order) return <p>Cargando...</p>;
+  if (!order) return <div className="p-4">Cargando...</div>;
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Pedido</h1>
+    <div className="max-w-2xl mx-auto p-4">
 
-      <div className="mb-4">
-        <label className="font-semibold">Cliente:</label>
-        <input
-          value={customerName}
-          onChange={(e) => setCustomerName(e.target.value)}
-          className="border p-2 rounded ml-2"
-        />
-        <button
-          onClick={saveName}
-          className="ml-3 px-3 py-1 bg-blue-500 text-white rounded"
-        >
-          Guardar
-        </button>
-      </div>
+      <h1 className="text-2xl font-bold mb-4">
+        Pedido de {order.customerName || "Sin nombre"}
+      </h1>
 
-      <h2 className="text-xl font-semibold mb-2">Productos</h2>
+      <p className="mb-3 text-gray-700">
+        Total: ${order.total}
+      </p>
 
-      <ul className="space-y-2">
-        {order.cart?.map((item, i) => (
-          <li key={i} className="border p-2 rounded">
-            {item.name} — x{item.qty}
-          </li>
+      <h2 className="text-xl font-semibold mt-6 mb-2">Productos</h2>
+
+      <div className="space-y-2">
+        {order.cart?.map((item) => (
+          <div
+            key={item.name}
+            className="p-3 bg-white shadow rounded border flex justify-between"
+          >
+            <div>{item.name}</div>
+            <div>
+              {item.qty} {item.unit || ""}
+            </div>
+          </div>
         ))}
-      </ul>
-
-      <p className="mt-4 font-bold">Subtotal: ${order.subtotal}</p>
-      <p className="font-bold">Envío: ${order.envio}</p>
-      <p className="font-bold">Total: ${order.total}</p>
-
-      <button
-        onClick={deleteOrder}
-        className="mt-5 w-full bg-red-500 text-white py-2 rounded"
-      >
-        Eliminar pedido
-      </button>
+      </div>
     </div>
   );
 }

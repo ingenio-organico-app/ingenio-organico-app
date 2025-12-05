@@ -14,7 +14,13 @@ import EditProduct from "./EditProduct";
 import { ref, deleteObject } from "firebase/storage";
 import { Link } from "react-router-dom";
 
-// Orden: primero por "order", si no existe se manda al final.
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+} from "@hello-pangea/dnd";
+
+// Orden auxiliar
 const sortByOrder = (a, b) => {
   const ao = typeof a.order === "number" ? a.order : 999999;
   const bo = typeof b.order === "number" ? b.order : 999999;
@@ -29,26 +35,19 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showAddPanel, setShowAddPanel] = useState(false);
 
-  // Cargar productos desde Firestore
+  // Cargar productos
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const snapshot = await getDocs(collection(db, "products"));
-
-      const list = snapshot.docs.map((d) => {
-        const data = d.data();
-        return {
-          ...data,
-          id: d.id,
-          originalId: data.id ?? null,
-        };
-      });
-
+      const list = snapshot.docs.map((d) => ({
+        ...d.data(),
+        id: d.id,
+      }));
       setProducts(list);
     } catch (e) {
       console.error("Error al obtener productos:", e);
-      alert("Error cargando productos: " + (e.message || e));
-      setProducts([]);
+      alert("Error cargando productos");
     } finally {
       setLoading(false);
     }
@@ -61,9 +60,7 @@ export default function AdminProducts() {
   // Cambiar disponibilidad
   const toggleAvailable = async (prod) => {
     try {
-      const current = prod.available;
-      const newValue = current === false ? true : !current;
-
+      const newValue = prod.available === false ? true : !prod.available;
       await updateDoc(doc(db, "products", prod.id), {
         available: newValue,
       });
@@ -74,15 +71,14 @@ export default function AdminProducts() {
         )
       );
     } catch (e) {
-      console.error("Error al cambiar disponibilidad:", e);
-      alert("Error al cambiar disponibilidad: " + (e.message || e));
+      console.error(e);
+      alert("Error al cambiar disponibilidad");
     }
   };
 
   // Eliminar producto
   const deleteProduct = async (prod) => {
-    const ok = window.confirm(`¿Eliminar "${prod.name}"?`);
-    if (!ok) return;
+    if (!window.confirm(`¿Eliminar "${prod.name}"?`)) return;
 
     try {
       if (prod.image) {
@@ -94,83 +90,50 @@ export default function AdminProducts() {
       }
 
       await deleteDoc(doc(db, "products", prod.id));
-
       setProducts((prev) => prev.filter((p) => p.id !== prod.id));
-      alert("Producto eliminado ✔");
     } catch (e) {
-      console.error("Error al eliminar producto:", e);
-      alert("Error al eliminar producto: " + (e.message || e));
+      console.error(e);
+      alert("Error al eliminar producto");
     }
   };
 
-  // Mover producto en la lista
-  const moveProduct = async (prod, direction) => {
+  // 🔥 Guardar orden al soltar
+  const saveOrderToFirestore = async (items) => {
     try {
-      const isExtra = !!prod.extra;
-
-      const group = products
-        .filter((p) => !!p.extra === isExtra)
-        .sort(sortByOrder);
-
-      const index = group.findIndex((p) => p.id === prod.id);
-      if (index === -1) return;
-
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= group.length) return;
-
-      const newGroup = [...group];
-      const temp = newGroup[index];
-      newGroup[index] = newGroup[targetIndex];
-      newGroup[targetIndex] = temp;
-
-      const newGroupWithOrder = newGroup.map((p, idx) => ({
-        ...p,
-        order: idx,
-      }));
-
       await Promise.all(
-        newGroupWithOrder.map((p) =>
-          updateDoc(doc(db, "products", p.id), { order: p.order })
+        items.map((p, idx) =>
+          updateDoc(doc(db, "products", p.id), {
+            order: idx,
+          })
         )
       );
-
-      setProducts((prev) =>
-        prev.map((p) => {
-          const updated = newGroupWithOrder.find((g) => g.id === p.id);
-          return updated ? { ...p, order: updated.order } : p;
-        })
-      );
-    } catch (e) {
-      console.error("Error al cambiar orden:", e);
-      alert("Error al cambiar orden: " + (e.message || e));
+    } catch (err) {
+      console.error("Error guardando orden:", err);
     }
   };
 
-  // Subir lista de data/products.js
-  const handleUploadProducts = async () => {
-    try {
-      setUploading(true);
-      const added = await uploadProducts();
-      alert(
-        added > 0
-          ? `${added} productos nuevos subidos`
-          : "No había productos nuevos para subir"
-      );
-      await fetchProducts();
-    } catch (e) {
-      console.error("Error en uploadProducts:", e);
-      alert("Error al subir lista de productos: " + (e.message || e));
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Drag & Drop handler
+  const onDragEnd = async (result, groupType) => {
+    if (!result.destination) return;
 
-  // Cuando se edita un producto
-  const handleUpdated = (updated) => {
+    const group = products
+      .filter((p) => (!!p.extra === (groupType === "extra")))
+      .sort(sortByOrder);
+
+    const newList = Array.from(group);
+    const [moved] = newList.splice(result.source.index, 1);
+    newList.splice(result.destination.index, 0, moved);
+
+    // Guardar en Firestore
+    await saveOrderToFirestore(newList);
+
+    // Actualizar estado global
     setProducts((prev) =>
-      prev.map((p) => (p.id === updated.id ? updated : p))
+      prev.map((p) => {
+        const newPos = newList.findIndex((g) => g.id === p.id);
+        return newPos !== -1 ? { ...p, order: newPos } : p;
+      })
     );
-    setEditingProduct(null);
   };
 
   if (loading) return <p>Cargando productos...</p>;
@@ -178,54 +141,36 @@ export default function AdminProducts() {
   const general = products.filter((p) => !p.extra).sort(sortByOrder);
   const extra = products.filter((p) => p.extra).sort(sortByOrder);
 
-  const renderRow = (prod, idx, groupLength) => (
-    <tr key={prod.id} className="text-center">
-      <td className="border p-2 text-left">{prod.name ?? "—"}</td>
-      <td className="border p-2">
-        {typeof prod.price === "number" ? `$${prod.price}` : "—"}
-      </td>
-      <td className="border p-2">{prod.available === false ? "❌" : "✅"}</td>
+  // Render fila
+  const renderRow = (prod) => (
+    <div className="grid grid-cols-5 gap-2 p-2 border-b bg-white rounded">
+      <div>{prod.name}</div>
+      <div>{typeof prod.price === "number" ? `$${prod.price}` : "—"}</div>
+      <div>{prod.available === false ? "❌" : "✅"}</div>
 
-      <td className="border p-2">
+      <div className="flex gap-1">
         <button
-          className="px-2 border rounded mr-1 disabled:opacity-40"
-          disabled={idx === 0}
-          onClick={() => moveProduct(prod, "up")}
-        >
-          ↑
-        </button>
-        <button
-          className="px-2 border rounded disabled:opacity-40"
-          disabled={idx === groupLength - 1}
-          onClick={() => moveProduct(prod, "down")}
-        >
-          ↓
-        </button>
-      </td>
-
-      <td className="border p-2 space-x-1">
-        <button
-          className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+          className="px-2 py-1 text-xs bg-blue-500 text-white rounded"
           onClick={() => toggleAvailable(prod)}
         >
           Disponibilidad
         </button>
 
         <button
-          className="px-2 py-1 bg-orange-500 text-white rounded text-xs"
+          className="px-2 py-1 text-xs bg-orange-500 text-white rounded"
           onClick={() => setEditingProduct(prod)}
         >
           Editar
         </button>
 
         <button
-          className="px-2 py-1 bg-red-600 text-white rounded text-xs"
+          className="px-2 py-1 text-xs bg-red-600 text-white rounded"
           onClick={() => deleteProduct(prod)}
         >
           Eliminar
         </button>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 
   return (
@@ -233,53 +178,56 @@ export default function AdminProducts() {
 
       <h1 className="text-2xl font-bold mb-4">Admin de productos</h1>
 
-      {/* PANEL DE EDICIÓN */}
       {editingProduct && (
         <EditProduct
           product={editingProduct}
-          onSaved={handleUpdated}
+          onSaved={(updated) => {
+            setProducts((prev) =>
+              prev.map((p) => (p.id === updated.id ? updated : p))
+            );
+            setEditingProduct(null);
+          }}
           onCancel={() => setEditingProduct(null)}
         />
       )}
 
-      {/* BOTONES PRINCIPALES */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-
-        {/* 🔥 Nuevo botón + directo a estadísticas */}
+      {/* Botones principales */}
+      <div className="mb-4 flex flex-wrap gap-3 items-center">
         <Link
           to="/stats"
-          className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+          className="px-4 py-2 bg-purple-600 text-white rounded"
         >
           Ver estadísticas
         </Link>
 
-        {/* Botón para volver a la tienda */}
         <Link
           to="/"
-          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+          className="px-4 py-2 bg-gray-600 text-white rounded"
         >
           Ir a la tienda
         </Link>
 
-        {/* Botón para agregar producto */}
         <button
-          onClick={() => setShowAddPanel((prev) => !prev)}
+          onClick={() => setShowAddPanel(!showAddPanel)}
           className="px-4 py-2 bg-indigo-600 text-white rounded"
         >
           {showAddPanel ? "Cerrar panel" : "Agregar producto nuevo"}
         </button>
 
-        {/* Botón subir lista */}
         <button
-          onClick={handleUploadProducts}
+          onClick={async () => {
+            setUploading(true);
+            await uploadProducts();
+            await fetchProducts();
+            setUploading(false);
+          }}
           disabled={uploading}
           className="px-4 py-2 bg-green-600 text-white rounded disabled:bg-gray-500"
         >
-          {uploading ? "Subiendo lista..." : "Subir lista completa"}
+          {uploading ? "Subiendo..." : "Subir lista completa"}
         </button>
       </div>
 
-      {/* PANEL DE AGREGAR */}
       {showAddPanel && (
         <div className="mb-6">
           <UploadProducts onProductAdded={fetchProducts} />
@@ -287,43 +235,72 @@ export default function AdminProducts() {
       )}
 
       {/* LISTA GENERAL */}
-      <h2 className="text-xl font-semibold mt-2 mb-2">Lista General</h2>
-      <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-white/20 mb-6">
-        <table className="w-full text-sm border">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2 border text-left">Nombre</th>
-              <th className="p-2 border">Precio</th>
-              <th className="p-2 border">Disp.</th>
-              <th className="p-2 border">Orden</th>
-              <th className="p-2 border">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {general.map((p, i) => renderRow(p, i, general.length))}
-          </tbody>
-        </table>
-      </div>
+      <h2 className="text-xl font-semibold mb-2">Lista General</h2>
 
-      {/* PRODUCTOS EXTRA */}
-      <h2 className="text-xl font-semibold mt-2 mb-2">Productos Extra</h2>
-      <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-white/20">
-        <table className="w-full text-sm border">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2 border text-left">Nombre</th>
-              <th className="p-2 border">Precio</th>
-              <th className="p-2 border">Disp.</th>
-              <th className="p-2 border">Orden</th>
-              <th className="p-2 border">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {extra.map((p, i) => renderRow(p, i, extra.length))}
-          </tbody>
-        </table>
-      </div>
+      <DragDropContext
+        onDragEnd={(result) => onDragEnd(result, "general")}
+      >
+        <Droppable droppableId="general">
+          {(provided) => (
+            <div
+              className="bg-white/40 backdrop-blur-sm p-3 rounded-xl mb-6 border"
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+            >
+              {general.map((p, i) => (
+                <Draggable key={p.id} draggableId={p.id} index={i}>
+                  {(provided) => (
+                    <div
+                      className="cursor-grab"
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                    >
+                      {renderRow(p)}
+                    </div>
+                  )}
+                </Draggable>
+              ))}
 
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+
+      {/* EXTRAS */}
+      <h2 className="text-xl font-semibold mb-2">Productos Extra</h2>
+
+      <DragDropContext
+        onDragEnd={(result) => onDragEnd(result, "extra")}
+      >
+        <Droppable droppableId="extra">
+          {(provided) => (
+            <div
+              className="bg-white/40 backdrop-blur-sm p-3 rounded-xl border"
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+            >
+              {extra.map((p, i) => (
+                <Draggable key={p.id} draggableId={p.id} index={i}>
+                  {(provided) => (
+                    <div
+                      className="cursor-grab"
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                    >
+                      {renderRow(p)}
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
     </div>
   );
 }
