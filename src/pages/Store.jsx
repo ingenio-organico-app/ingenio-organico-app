@@ -152,28 +152,26 @@ export default function Store() {
       </span>
     )}
 
-    {/* Botones */}
-    <div className="flex items-center gap-4 mt-auto">
-      <button
-        className="px-3 py-2 bg-gray-200 rounded-xl text-lg"
-        onClick={() => updateQty(prod.id, -1, prod)}
-      >
-        –
-      </button>
+{/* CONTROLES DE CANTIDAD */}
+<div className="flex items-center gap-2 mt-auto">
+  <button
+    className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-lg text-lg hover:bg-gray-300 transition"
+    onClick={() => updateQty(prod.id, -1, prod)}
+  >
+    –
+  </button>
 
-      <span className="w-6 text-center font-bold">
-        {cart.find((i) => i.id === prod.id)?.qty || 0}
-      </span>
+  <span className="w-6 text-center font-bold text-gray-800">
+    {cart.find((i) => i.id === prod.id)?.qty || 0}
+  </span>
 
-      <button
-        className="px-3 py-2 bg-emerald-500 text-white rounded-xl text-lg"
-        onClick={() => updateQty(prod.id, 1, prod)}
-      >
-        +
-      </button>
-    </div>
-  </div>
-);
+  <button
+    className="w-8 h-8 flex items-center justify-center bg-emerald-500 text-white rounded-lg text-lg hover:bg-emerald-600 transition"
+    onClick={() => updateQty(prod.id, 1, prod)}
+  >
+    +
+  </button>
+</div>
 
   return (
     <div className="min-h-screen py-6">
