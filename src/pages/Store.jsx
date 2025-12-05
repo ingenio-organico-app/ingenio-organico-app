@@ -153,20 +153,20 @@ export default function Store() {
     )}
 
 {/* CONTROLES DE CANTIDAD */}
-<div className="flex items-center gap-2 mt-auto">
+<div className="flex items-center justify-center gap-2 mt-auto w-full">
   <button
-    className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-lg text-lg hover:bg-gray-300 transition"
+    className="w-7 h-7 flex items-center justify-center bg-gray-200 rounded-lg text-base hover:bg-gray-300 transition"
     onClick={() => updateQty(prod.id, -1, prod)}
   >
     –
   </button>
 
-  <span className="w-6 text-center font-bold text-gray-800">
+  <span className="w-5 text-center font-bold text-gray-800 text-sm">
     {cart.find((i) => i.id === prod.id)?.qty || 0}
   </span>
 
   <button
-    className="w-8 h-8 flex items-center justify-center bg-emerald-500 text-white rounded-lg text-lg hover:bg-emerald-600 transition"
+    className="w-7 h-7 flex items-center justify-center bg-emerald-500 text-white rounded-lg text-base hover:bg-emerald-600 transition"
     onClick={() => updateQty(prod.id, 1, prod)}
   >
     +
