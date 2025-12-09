@@ -1,166 +1,171 @@
-// src/pages/AdminProducts.jsx
-import { useEffect, useState } from "react";
-import {
-  collection,
-  getDocs,
-  doc,
-  updateDoc,
-  deleteDoc
-} from "firebase/firestore";
+// src/pages/AddProduct.jsx
+import { useState } from "react";
+import { collection, addDoc } from "firebase/firestore";
 import { db, storage } from "../firebase/firebase";
-import { uploadProducts } from "../firebase/uploadProducts";
-import UploadProducts from "./UploadProducts";
-import EditProduct from "./EditProduct";
-import { ref, deleteObject } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-export default function AdminProducts() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
+export default function AddProduct({ onCreated }) {
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState(0);
+  const [unit, setUnit] = useState("gr");
+  const [gramAmount, setGramAmount] = useState("");
+  const [extra, setExtra] = useState(false);
+  const [weighed, setWeighed] = useState(false);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    const snapshot = await getDocs(collection(db, "products"));
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
-    const prods = snapshot.docs
-      .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+  const [saving, setSaving] = useState(false);
 
-    setProducts(prods);
-    setLoading(false);
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    const preview = URL.createObjectURL(file);
+    setImagePreview(preview);
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const toggleAvailable = async (id, current) => {
-    await updateDoc(doc(db, "products", id), {
-      available: !current
-    });
-
-    setProducts(prev =>
-      prev.map(p => (p.id === id ? { ...p, available: !current } : p))
-    );
-  };
-
-  const deleteProduct = async prod => {
-    const ok = confirm(`¿Eliminar "${prod.name}"?`);
-    if (!ok) return;
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      alert("Falta el nombre del producto");
+      return;
+    }
 
     try {
-      if (prod.image) {
-        const imgRef = ref(storage, prod.image);
-        await deleteObject(imgRef).catch(() => {});
+      setSaving(true);
+
+      let imageURL = null;
+
+      // SUBIR IMAGEN SI HAY
+      if (imageFile) {
+        const imgRef = ref(
+          storage,
+          `products/${Date.now()}-${imageFile.name}`
+        );
+        await uploadBytes(imgRef, imageFile);
+        imageURL = await getDownloadURL(imgRef);
       }
 
-      await deleteDoc(doc(db, "products", prod.id));
+      const newProduct = {
+        name: name.trim(),
+        price: Number(price),
+        unit,
+        gramAmount: unit === "gr" ? Number(gramAmount) : null,
+        extra,
+        weighed,
+        available: true,
+        image: imageURL,
+        order: 999999, // se puede modificar en admin
+      };
 
-      setProducts(prev => prev.filter(p => p.id !== prod.id));
+      const docRef = await addDoc(collection(db, "products"), newProduct);
 
-      alert("Producto eliminado ✔");
+      onCreated({ id: docRef.id, ...newProduct });
     } catch (err) {
-      console.error(err);
-      alert("❌ Error al eliminar producto");
+      console.error("Error creando producto:", err);
+      alert("Error creando producto: " + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleUploadProducts = async () => {
-    setUploading(true);
-    const added = await uploadProducts();
-    alert(`${added} productos nuevos subidos`);
-    await fetchProducts();
-    setUploading(false);
-  };
-
-  if (loading) return <p>Cargando productos...</p>;
-
-  const generalProducts = products.filter(p => !p.extra);
-  const extraProducts = products.filter(p => p.extra);
-
-  const renderRow = prod => (
-    <tr key={prod.id} className="text-center">
-      <td className="p-2 border">{prod.name}</td>
-      <td className="p-2 border">{prod.available ? "✅" : "❌"}</td>
-      <td className="p-2 border space-x-2">
-        <button
-          className="px-3 py-1 bg-blue-500 text-white rounded"
-          onClick={() => toggleAvailable(prod.id, prod.available)}
-        >
-          Disponibilidad
-        </button>
-
-        <button
-          className="px-3 py-1 bg-amber-500 text-white rounded"
-          onClick={() => setEditingProduct(prod)}
-        >
-          Editar
-        </button>
-
-        <button
-          className="px-3 py-1 bg-red-600 text-white rounded"
-          onClick={() => deleteProduct(prod)}
-        >
-          Eliminar
-        </button>
-      </td>
-    </tr>
-  );
-
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="p-4 mb-6 border rounded-xl bg-white shadow">
+      <h2 className="text-lg font-semibold mb-3">Agregar producto</h2>
 
-      <h1 className="text-2xl font-bold mb-4">Administrar Productos</h1>
-
-      {editingProduct && (
-        <EditProduct
-          product={editingProduct}
-          onSaved={updated => {
-            setProducts(prev =>
-              prev.map(p => (p.id === updated.id ? updated : p))
-            );
-            setEditingProduct(null);
-          }}
-          onCancel={() => setEditingProduct(null)}
+      {/* Nombre */}
+      <label className="block mb-2 text-sm">
+        Nombre:
+        <input
+          type="text"
+          className="w-full border p-2 rounded mt-1"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
+      </label>
+
+      {/* Precio */}
+      <label className="block mb-2 text-sm">
+        Precio:
+        <input
+          type="number"
+          className="w-full border p-2 rounded mt-1"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+      </label>
+
+      {/* Unidad */}
+      <label className="block mb-2 text-sm">
+        Unidad:
+        <select
+          className="w-full border p-2 rounded mt-1"
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+        >
+          <option value="gr">Gramos</option>
+          <option value="kg">Kg</option>
+          <option value="atado">Atado</option>
+        </select>
+      </label>
+
+      {/* Cantidad de gramos */}
+      {unit === "gr" && (
+        <label className="block mb-3 text-sm">
+          Cantidad en gramos:
+          <input
+            type="number"
+            className="w-full border p-2 rounded mt-1"
+            value={gramAmount}
+            onChange={(e) => setGramAmount(e.target.value)}
+          />
+        </label>
       )}
 
-      <UploadProducts onProductAdded={fetchProducts} />
+      {/* Extra */}
+      <label className="flex items-center gap-2 mb-2 text-sm">
+        <input
+          type="checkbox"
+          checked={extra}
+          onChange={(e) => setExtra(e.target.checked)}
+        />
+        Producto extra
+      </label>
 
+      {/* A pesar */}
+      <label className="flex items-center gap-2 mb-4 text-sm">
+        <input
+          type="checkbox"
+          checked={weighed}
+          onChange={(e) => setWeighed(e.target.checked)}
+        />
+        Se pesa aparte
+      </label>
+
+      {/* Imagen */}
       <div className="mb-4">
-        <button
-          onClick={handleUploadProducts}
-          disabled={uploading}
-          className="px-4 py-2 bg-green-600 text-white rounded"
-        >
-          {uploading ? "Subiendo..." : "Subir lista completa"}
-        </button>
+        <p className="text-sm font-medium mb-1">Imagen:</p>
+
+        {imagePreview && (
+          <img
+            src={imagePreview}
+            alt="preview"
+            className="w-20 h-20 object-cover rounded-lg border mb-2"
+          />
+        )}
+
+        <input type="file" accept="image/*" onChange={handleImageChange} />
       </div>
 
-      <h2 className="text-xl font-semibold mb-2">Productos Generales</h2>
-      <table className="w-full border mb-6">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="p-2 border">Nombre</th>
-            <th className="p-2 border">Disponible</th>
-            <th className="p-2 border">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>{generalProducts.map(renderRow)}</tbody>
-      </table>
-
-      <h2 className="text-xl font-semibold mb-2">Productos Extra</h2>
-      <table className="w-full border">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="p-2 border">Nombre</th>
-            <th className="p-2 border">Disponible</th>
-            <th className="p-2 border">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>{extraProducts.map(renderRow)}</tbody>
-      </table>
+      {/* Botón */}
+      <button
+        className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-60"
+        onClick={handleSubmit}
+        disabled={saving}
+      >
+        {saving ? "Guardando..." : "Agregar producto"}
+      </button>
     </div>
   );
 }

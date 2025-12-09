@@ -7,7 +7,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage
 export default function EditProduct({ product, onSaved, onCancel }) {
   const [name, setName] = useState(product.name || "");
   const [price, setPrice] = useState(product.price || 0);
-  const [unit, setUnit] = useState(product.unit || "unidad");
+  const [unit, setUnit] = useState(product.unit || "gr");
   const [gramAmount, setGramAmount] = useState(product.gramAmount || "");
   const [extra, setExtra] = useState(product.extra || false);
   const [weighed, setWeighed] = useState(product.weighed || false);
@@ -22,9 +22,10 @@ export default function EditProduct({ product, onSaved, onCancel }) {
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setNewImageFile(file);
     setRemoveImage(false);
-    // Preview local (opcional)
+
     const preview = URL.createObjectURL(file);
     setImageUrl(preview);
   };
@@ -39,39 +40,28 @@ export default function EditProduct({ product, onSaved, onCancel }) {
     try {
       setSaving(true);
 
-      // Base actualizado
-      const updated = {
-        name: name.trim(),
-        price: Number(price),
-        unit,
-        gramAmount: unit === "gr" ? Number(gramAmount) : null,
-        extra,
-        weighed,
-        available: product.available, // mantenemos disponibilidad del admin
-      };
-
       let finalImage = product.image || null;
 
-      // Si el usuario quiere quitar la imagen
+      // SI EL USUARIO BORRÓ LA IMAGEN
       if (removeImage && !newImageFile) {
         if (product.image) {
           try {
             await deleteObject(ref(storage, product.image));
           } catch (e) {
-            console.warn("No se pudo borrar la imagen anterior:", e);
+            console.warn("No se pudo borrar imagen anterior:", e);
           }
         }
         finalImage = null;
       }
 
-      // Si el usuario seleccionó una nueva imagen
+      // SI SUBE UNA NUEVA IMAGEN
       if (newImageFile) {
-        // Borrar imagen anterior si existía
+        // Borrar vieja si existía
         if (product.image) {
           try {
             await deleteObject(ref(storage, product.image));
           } catch (e) {
-            console.warn("No se pudo borrar la imagen anterior:", e);
+            console.warn("No se pudo borrar imagen anterior:", e);
           }
         }
 
@@ -79,20 +69,27 @@ export default function EditProduct({ product, onSaved, onCancel }) {
           storage,
           `products/${product.id}-${newImageFile.name}`
         );
+
         await uploadBytes(storageRef, newImageFile);
         finalImage = await getDownloadURL(storageRef);
       }
 
-      updated.image = finalImage || null;
+      // OBJETO ACTUALIZADO
+      const updated = {
+        name: name.trim(),
+        price: Number(price),
+        unit,
+        gramAmount: unit === "gr" ? Number(gramAmount) : null,
+        extra,
+        weighed,
+        image: finalImage,
+        available: product.available, // mantiene valor actual
+      };
 
-      // Actualizar en Firestore
+      // GUARDAR EN FIRESTORE
       await updateDoc(doc(db, "products", product.id), updated);
 
-      // Devolver al AdminProducts para refrescar la tabla
-      onSaved({
-        ...product,
-        ...updated,
-      });
+      onSaved({ ...product, ...updated });
     } catch (err) {
       console.error("Error al editar producto:", err);
       alert("Error al editar producto: " + err.message);
@@ -135,14 +132,13 @@ export default function EditProduct({ product, onSaved, onCancel }) {
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
         >
-          <option value="unidad">Unidad</option>
           <option value="gr">Gramos</option>
           <option value="kg">Kg</option>
-          <option value="lt">Litro</option>
+          <option value="atado">Atado</option>
         </select>
       </label>
 
-      {/* GramAmount solo si unidad = gr */}
+      {/* Cantidad en gramos solo si unit = gr */}
       {unit === "gr" && (
         <label className="block mb-3 text-sm">
           Cantidad en gramos:
@@ -217,6 +213,7 @@ export default function EditProduct({ product, onSaved, onCancel }) {
         >
           {saving ? "Guardando..." : "Guardar"}
         </button>
+
         <button
           className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
           onClick={onCancel}

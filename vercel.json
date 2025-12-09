@@ -1,5 +1,8 @@
 {
   "rewrites": [
+    { "source": "/admin", "destination": "/" },
+    { "source": "/stats", "destination": "/" },
+    { "source": "/stats/:weekId", "destination": "/" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }

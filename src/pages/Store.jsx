@@ -140,11 +140,16 @@ export default function Store() {
           {prod.name}
         </h3>
 
-        <p className="text-gray-700 text-xs mb-2">
-          {prod.unit === "gr" && prod.gramAmount
-            ? `$${prod.price} / ${prod.gramAmount}g`
-            : `$${prod.price} / ${prod.unit}`}
-        </p>
+       <p className="text-gray-700 text-xs mb-2">
+  {prod.unit === "gr" && prod.gramAmount
+    ? `$${prod.price} / ${prod.gramAmount}g`
+    : prod.unit === "kg"
+    ? `$${prod.price} / kg`
+    : prod.unit === "atado"
+    ? `$${prod.price} / atado`
+    : `$${prod.price}`}
+</p>
+
 
         {prod.extra && (
           <span className="text-[11px] px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full mb-1">
