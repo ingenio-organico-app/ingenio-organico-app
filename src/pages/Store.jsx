@@ -46,8 +46,7 @@ export default function Store() {
     });
   };
 
-  const removeItem = (id) =>
-    setCart((prev) => prev.filter((i) => i.id !== id));
+  const removeItem = (id) => setCart((prev) => prev.filter((i) => i.id !== id));
 
   const subtotal = cart
     .filter((i) => !i.weighed)
@@ -63,21 +62,26 @@ export default function Store() {
       ? `Total: $${subtotal + envio} + productos a pesar (${weighedNames})`
       : `Total: $${subtotal + envio}`;
 
+  // (Tip iPhone) Evitamos emojis raros en el texto del mensaje (a veces iOS los “corta”)
   const message = `Hola! Te paso mi pedido:\n\n${cart
     .map(
       (item) =>
         `• ${item.name} x ${item.qty}${
-          item.weighed ? " (🟰 a pesar)" : ""
+          item.weighed ? " (a pesar)" : ""
         }${item.extra ? " (EXTRA)" : ""}`
     )
-    .join(
-      "\n"
-    )}\n\n--------------------\nSubtotal: $${subtotal}\nEnvío: $${envio}\n${totalText}`;
+    .join("\n")}\n\n--------------------\nSubtotal: $${subtotal}\nEnvío: $${envio}\n${totalText}`;
 
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+  // ✅ Mejor compatibilidad iPhone
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+    message
+  )}`;
 
   const handleSendOrder = async () => {
     if (cart.length === 0) return;
+
+    // ✅ iOS: abrir primero (gesto del usuario) y luego setear URL
+    const waWindow = window.open("", "_blank");
 
     try {
       await saveOrder({
@@ -87,10 +91,18 @@ export default function Store() {
         customerName: "",
       });
 
-      window.open(whatsappUrl, "_blank");
+      if (waWindow) {
+        waWindow.location.href = whatsappUrl;
+      } else {
+        window.location.href = whatsappUrl;
+      }
     } catch (err) {
       console.error("Error guardando pedido:", err);
-      window.open(whatsappUrl, "_blank");
+      if (waWindow) {
+        waWindow.location.href = whatsappUrl;
+      } else {
+        window.location.href = whatsappUrl;
+      }
     }
   };
 
@@ -140,16 +152,15 @@ export default function Store() {
           {prod.name}
         </h3>
 
-       <p className="text-gray-700 text-xs mb-2">
-  {prod.unit === "gr" && prod.gramAmount
-    ? `$${prod.price} / ${prod.gramAmount}g`
-    : prod.unit === "kg"
-    ? `$${prod.price} / kg`
-    : prod.unit === "atado"
-    ? `$${prod.price} / atado`
-    : `$${prod.price}`}
-</p>
-
+        <p className="text-gray-700 text-xs mb-2">
+          {prod.unit === "gr" && prod.gramAmount
+            ? `$${prod.price} / ${prod.gramAmount}g`
+            : prod.unit === "kg"
+            ? `$${prod.price} / kg`
+            : prod.unit === "atado"
+            ? `$${prod.price} / atado`
+            : `$${prod.price}`}
+        </p>
 
         {prod.extra && (
           <span className="text-[11px] px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full mb-1">
@@ -193,7 +204,6 @@ export default function Store() {
   return (
     <div className="min-h-screen pb-40">
       <div className="max-w-4xl mx-auto p-4">
-
         {/* HEADER */}
         <div className="rounded-3xl bg-white/40 backdrop-blur-sm border border-white/20 py-8 mb-10">
           <div className="flex flex-col items-center">
@@ -204,7 +214,10 @@ export default function Store() {
 
         {/* GENERAL */}
         <div className="flex items-center gap-3 mb-3 ml-[6px]">
-          <img src="/images/lista-general.png" className="w-[161px] max-w-[60%]" />
+          <img
+            src="/images/lista-general.png"
+            className="w-[161px] max-w-[60%]"
+          />
           <div className="h-[1px] flex-1 bg-gray-300 rounded-full" />
         </div>
 
@@ -215,7 +228,10 @@ export default function Store() {
 
         {/* EXTRA */}
         <div className="flex items-center gap-3 mt-8 mb-3 ml-[6px]">
-          <img src="/images/productos-extra.png" className="w-[184px] max-w-[70%]" />
+          <img
+            src="/images/productos-extra.png"
+            className="w-[184px] max-w-[70%]"
+          />
           <div className="h-[1px] flex-1 bg-gray-300 rounded-full" />
         </div>
 
@@ -238,7 +254,8 @@ export default function Store() {
           onClick={() => setCartOpen(true)}
         >
           <span className="font-semibold text-gray-800">
-            🛒 {cart.length} {cart.length === 1 ? "producto" : "productos"} — ${subtotal}
+            🛒 {cart.length} {cart.length === 1 ? "producto" : "productos"} — $
+            {subtotal}
           </span>
 
           <button className="bg-emerald-500 text-white px-3 py-1 rounded-lg text-sm">
@@ -251,19 +268,35 @@ export default function Store() {
       {cartOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex justify-center items-end">
           <div className="bg-white w-full rounded-t-3xl p-6 shadow-xl max-h-[80%] overflow-y-auto">
-
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Tu carrito</h2>
-              <button className="text-gray-500 text-2xl" onClick={() => setCartOpen(false)}>×</button>
+              <button
+                className="text-gray-500 text-2xl"
+                onClick={() => setCartOpen(false)}
+              >
+                ×
+              </button>
             </div>
 
             <div className="space-y-3">
               {cart.map((item) => (
-                <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border">
-                  <span className="font-medium">{item.name} x{item.qty}</span>
+                <div
+                  key={item.id}
+                  className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border"
+                >
+                  <span className="font-medium">
+                    {item.name} x{item.qty}
+                  </span>
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-gray-800">${item.price * item.qty}</span>
-                    <button className="text-xs text-red-500" onClick={() => removeItem(item.id)}>❌</button>
+                    <span className="font-semibold text-gray-800">
+                      ${item.price * item.qty}
+                    </span>
+                    <button
+                      className="text-xs text-red-500"
+                      onClick={() => removeItem(item.id)}
+                    >
+                      ❌
+                    </button>
                   </div>
                 </div>
               ))}
@@ -281,7 +314,6 @@ export default function Store() {
             >
               Enviar pedido
             </button>
-
           </div>
         </div>
       )}
