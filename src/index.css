@@ -1,11 +1,18 @@
 @import "tailwindcss";
-/* Fondo general */
+
+/* Fondo general (fix iPhone Safari) */
 body {
   background-image: url("/images/background2.png");
-  background-attachment: fixed;   /* se queda quieto al scrollear */
-  background-size: cover;         /* cubre toda la pantalla */
-  background-position: center;
+  background-attachment: scroll; /* ✅ iPhone: fixed hace zoom raro */
+  background-size: cover;
+  background-position: center center;
   background-repeat: no-repeat;
-  /* Velo blanco suave encima */
+}
+
+/* Velo blanco suave encima del fondo */
+#root {
+  min-height: 100vh;
+  background: rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: brightness(1.25);
   backdrop-filter: brightness(1.25);
 }
