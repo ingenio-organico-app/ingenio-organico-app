@@ -308,8 +308,7 @@ export default function Store() {
             {/* ✅ Aviso EXTRA (si hay productos extra en el carrito) */}
             {hasExtraInCart && (
               <div className="mt-4 p-3 rounded-xl text-sm bg-purple-100 text-purple-800 border border-purple-200">
-                🟣 EXTRA: se incluye desde $400 en la lista general (se confirma al entregar).
-              </div>
+                🟣 EXTRA: se incluye desde $400 en productos de la lista general              </div>
             )}
 
             <div className="mt-6 text-sm text-gray-700">
