@@ -127,15 +127,17 @@ export default function EditProduct({ product, onSaved, onCancel }) {
       {/* Unidad */}
       <label className="block mb-2 text-sm">
         Unidad:
-        <select
-          className="w-full border p-2 rounded mt-1"
-          value={unit}
-          onChange={(e) => setUnit(e.target.value)}
-        >
-          <option value="gr">Gramos</option>
-          <option value="kg">Kg</option>
-          <option value="atado">Atado</option>
-        </select>
+       <select
+  className="w-full border p-2 rounded mt-1"
+  value={unit}
+  onChange={(e) => setUnit(e.target.value)}
+>
+  <option value="unidad">Unidad</option>
+  <option value="gr">Gramos</option>
+  <option value="kg">Kg</option>
+  <option value="atado">Atado</option>
+</select>
+
       </label>
 
       {/* Cantidad en gramos solo si unit = gr */}

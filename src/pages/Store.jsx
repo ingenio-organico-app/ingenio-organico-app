@@ -57,6 +57,9 @@ export default function Store() {
 
   const envio = 100;
 
+  // ✅ Aviso EXTRA (sin validar $400 por los productos a pesar)
+  const hasExtraInCart = cart.some((item) => item.extra);
+
   const totalText =
     weighedProducts.length > 0
       ? `Total: $${subtotal + envio} + productos a pesar (${weighedNames})`
@@ -205,7 +208,7 @@ export default function Store() {
     <div className="min-h-screen pb-40">
       <div className="max-w-4xl mx-auto p-4">
         {/* HEADER */}
-        <div className="rounded-3xl bg-white/5 backdrop-blur-sm border border-white/20 py-8 mb-10">
+        <div className="rounded-3xl bg-white/20 backdrop-blur-sm border border-white/20 py-8 mb-10">
           <div className="flex flex-col items-center">
             <img src="/images/logo.png" className="w-[483px] mb-4 max-w-full" />
             <img src="/images/sublogo.png" className="w-[300px] max-w-full" />
@@ -301,6 +304,13 @@ export default function Store() {
                 </div>
               ))}
             </div>
+
+            {/* ✅ Aviso EXTRA (si hay productos extra en el carrito) */}
+            {hasExtraInCart && (
+              <div className="mt-4 p-3 rounded-xl text-sm bg-purple-100 text-purple-800 border border-purple-200">
+                🟣 EXTRA: se incluye desde $400 en la lista general (se confirma al entregar).
+              </div>
+            )}
 
             <div className="mt-6 text-sm text-gray-700">
               <p>Subtotal: ${subtotal}</p>

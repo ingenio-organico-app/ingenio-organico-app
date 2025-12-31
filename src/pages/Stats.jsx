@@ -13,11 +13,7 @@ import {
 } from "firebase/firestore";
 import { Link } from "react-router-dom";
 
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-} from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function Stats() {
   const [totals, setTotals] = useState([]);
@@ -35,6 +31,19 @@ export default function Stats() {
     const week = Math.ceil(diff / (7 * 24 * 60 * 60 * 1000));
     return `${year}-${String(week).padStart(2, "0")}`;
   }
+
+  // Etiqueta de unidad para “lista de cosecha”
+  const getUnitLabel = (item) => {
+    const u = item?.unit || "unidad";
+    if (u === "gr") {
+      const ga = item?.gramAmount;
+      return ga ? `${ga}gr` : "gr";
+    }
+    if (u === "kg") return "kg";
+    if (u === "atado") return "atado";
+    if (u === "unidad") return "unidad";
+    return u; // por si aparece otra unidad
+  };
 
   // Cargar semanas disponibles
   const loadWeeks = async () => {
@@ -65,15 +74,16 @@ export default function Stats() {
 
         // Sumar totales por producto a partir de cart
         order.cart?.forEach((item) => {
-          if (!totalsMap[item.name]) {
-            totalsMap[item.name] = {
+          const key = item.name; // asumimos nombre único por producto
+          if (!totalsMap[key]) {
+            totalsMap[key] = {
               name: item.name,
-              unit: item.unit,
               icon: item.icon,
+              unitLabel: getUnitLabel(item),
               qty: 0,
             };
           }
-          totalsMap[item.name].qty += item.qty || 0;
+          totalsMap[key].qty += item.qty || 0;
         });
       });
 
@@ -88,10 +98,9 @@ export default function Stats() {
 
       setOrders(sorted);
 
+      // ✅ Totales alfabético A-Z
       setTotals(
-        Object.values(totalsMap).sort((a, b) =>
-          a.name.localeCompare(b.name)
-        )
+        Object.values(totalsMap).sort((a, b) => a.name.localeCompare(b.name))
       );
     });
   };
@@ -115,9 +124,7 @@ export default function Stats() {
     for (let i = 0; i < newOrders.length; i++) {
       const o = newOrders[i];
       try {
-        await updateDoc(doc(db, "orders", o.id), {
-          manualOrder: i + 1,
-        });
+        await updateDoc(doc(db, "orders", o.id), { manualOrder: i + 1 });
       } catch (err) {
         console.error("Error guardando orden:", err);
       }
@@ -140,8 +147,7 @@ export default function Stats() {
   const totalPedidos = orders.length;
   const totalItems = orders.reduce(
     (sum, o) =>
-      sum +
-      (o.cart?.reduce((acc, item) => acc + (item.qty || 0), 0) || 0),
+      sum + (o.cart?.reduce((acc, item) => acc + (item.qty || 0), 0) || 0),
     0
   );
   const totalRecaudado = orders.reduce(
@@ -157,7 +163,7 @@ export default function Stats() {
     text += `Total recaudado: $${totalRecaudado}\n\n`;
     text += `Totales por producto:\n`;
     totals.forEach((t) => {
-      text += `- ${t.name}: ${t.qty} ${t.unit || ""}\n`;
+      text += `- ${t.name} (${t.unitLabel || "-" }): ${t.qty}\n`;
     });
     return text;
   };
@@ -169,7 +175,6 @@ export default function Stats() {
         await navigator.clipboard.writeText(text);
         alert("Resumen copiado al portapapeles ✔");
       } else {
-        // Fallback viejito
         window.prompt("Copiá el resumen:", text);
       }
     } catch (err) {
@@ -237,7 +242,7 @@ export default function Stats() {
                   {item.name}
                 </td>
                 <td className="p-2 border">{item.qty}</td>
-                <td className="p-2 border">{item.unit || "-"}</td>
+                <td className="p-2 border">{item.unitLabel || "-"}</td>
               </tr>
             ))}
           </tbody>
