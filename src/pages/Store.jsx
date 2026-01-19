@@ -75,10 +75,11 @@ export default function Store() {
     )
     .join("\n")}\n\n--------------------\nSubtotal: $${subtotal}\nEnvío: $${envio}\n${totalText}`;
 
-  // ✅ Mejor compatibilidad iPhone
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-    message
-  )}`;
+ // ✅ Mejor compatibilidad iPhone + WhatsApp del emprendimiento
+const whatsappUrl = `https://api.whatsapp.com/send?phone=59899191250&text=${encodeURIComponent(
+  message
+)}`;
+
 
   const handleSendOrder = async () => {
     if (cart.length === 0) return;
