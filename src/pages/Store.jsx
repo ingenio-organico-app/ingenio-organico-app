@@ -209,12 +209,19 @@ const whatsappUrl = `https://api.whatsapp.com/send?phone=59899191250&text=${enco
     <div className="min-h-screen pb-40">
       <div className="max-w-4xl mx-auto p-4">
         {/* HEADER */}
-        <div className="rounded-3xl bg-white/20 backdrop-blur-sm border border-white/20 py-8 mb-10">
-          <div className="flex flex-col items-center">
-            <img src="/images/logo.png" className="w-[483px] mb-4 max-w-full" />
-            <img src="/images/sublogo.png" className="w-[300px] max-w-full" />
-          </div>
-        </div>
+<div className="rounded-3xl bg-white/20 backdrop-blur-sm border border-white/20 py-8 mb-10">
+  <div className="flex flex-col items-center gap-4">
+    <img
+      src="/images/logo.png"
+      className="w-[483px] max-w-full"
+    />
+    <img
+      src="/images/sublogo.png"
+      className="w-[300px] max-w-full"
+    />
+  </div>
+</div>
+
 
         {/* GENERAL */}
         <div className="flex items-center gap-3 mb-3 ml-[6px]">
