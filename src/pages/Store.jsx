@@ -213,7 +213,7 @@ const whatsappUrl = `https://api.whatsapp.com/send?phone=59899191250&text=${enco
   <div className="flex flex-col items-center gap-4">
     <img
       src="/images/logo3.png"
-      className="w-[483px] max-w-full"
+      className="w-[383px] max-w-full"
     />
     <img
       src="/images/sublogo3.png"
