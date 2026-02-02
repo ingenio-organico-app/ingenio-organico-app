@@ -318,6 +318,10 @@ const whatsappUrl = `https://api.whatsapp.com/send?phone=59899191250&text=${enco
               <div className="mt-4 p-3 rounded-xl text-sm bg-purple-100 text-purple-800 border border-purple-200">
                 🟣 EXTRA: se incluye desde $400 en productos de la lista general              </div>
             )}
+{/* ✅ Aviso compra mínima */}
+<div className="mt-4 p-3 rounded-xl text-sm bg-amber-100 text-amber-800 border border-amber-200">
+  🟡 Compra mínima: $400 en productos de la lista general + $100 de envío
+</div>
 
             <div className="mt-6 text-sm text-gray-700">
               <p>Subtotal: ${subtotal}</p>
