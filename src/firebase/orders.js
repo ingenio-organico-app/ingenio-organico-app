@@ -5,7 +5,7 @@ import { db } from "./firebase";
 // 🔥 Obtener semana ISO real (lunes a domingo)
 export function getCurrentISOWeek() {
   const date = new Date();
-  const day = date.getDay() || 7; 
+  const day = date.getDay() || 7;
   date.setDate(date.getDate() + 4 - day);
 
   const isoYear = date.getFullYear();
@@ -22,7 +22,14 @@ export function getCurrentISOWeek() {
 
 export async function saveOrder(orderData) {
   try {
-    const { cart, subtotal, envio, customerName = "" } = orderData;
+    const {
+      cart,
+      subtotal,
+      envio,
+      customerName = "",
+      customerPhone = "",
+    } = orderData;
+
     const total = subtotal + envio;
 
     const { weekId, weekNumber, year } = getCurrentISOWeek();
@@ -33,6 +40,7 @@ export async function saveOrder(orderData) {
       envio,
       total,
       customerName,
+      customerPhone,
       createdAt: serverTimestamp(),
       weekId,
       weekNumber,
