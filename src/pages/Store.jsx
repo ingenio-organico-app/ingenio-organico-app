@@ -10,6 +10,8 @@ export default function Store() {
   const [loading, setLoading] = useState(true);
 
   const [cartOpen, setCartOpen] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+const [customerPhone, setCustomerPhone] = useState("");
 
   // Cargar productos
   useEffect(() => {
@@ -66,14 +68,24 @@ export default function Store() {
       : `Total: $${subtotal + envio}`;
 
   // (Tip iPhone) Evitamos emojis raros en el texto del mensaje (a veces iOS los “corta”)
-  const message = `Hola! Te paso mi pedido:\n\n${cart
-    .map(
-      (item) =>
-        `• ${item.name} x ${item.qty}${
-          item.weighed ? " (a pesar)" : ""
-        }${item.extra ? " (EXTRA)" : ""}`
-    )
-    .join("\n")}\n\n--------------------\nSubtotal: $${subtotal}\nEnvío: $${envio}\n${totalText}`;
+  const message = `Hola! Te paso mi pedido:
+
+Cliente: ${customerName || "Sin nombre"}
+${customerPhone ? `Teléfono: ${customerPhone}` : ""}
+
+${cart
+  .map(
+    (item) =>
+      `• ${item.name} x ${item.qty}${
+        item.weighed ? " (a pesar)" : ""
+      }${item.extra ? " (EXTRA)" : ""}`
+  )
+  .join("\n")}
+
+--------------------
+Subtotal: $${subtotal}
+Envío: $${envio}
+${totalText}`;
 
  // ✅ Mejor compatibilidad iPhone + WhatsApp del emprendimiento
 const whatsappUrl = `https://api.whatsapp.com/send?phone=59899191250&text=${encodeURIComponent(
@@ -81,20 +93,24 @@ const whatsappUrl = `https://api.whatsapp.com/send?phone=59899191250&text=${enco
 )}`;
 
 
-  const handleSendOrder = async () => {
-    if (cart.length === 0) return;
+  const handleSendOrder = async () => { 
+   if (cart.length === 0) return;
+   if (!customerName.trim()) {
+  alert("Por favor escribe tu nombre y apellido");
+  return;
+}
 
     // ✅ iOS: abrir primero (gesto del usuario) y luego setear URL
     const waWindow = window.open("", "_blank");
 
     try {
       await saveOrder({
-        cart,
-        subtotal,
-        envio,
-        customerName: "",
-      });
-
+  cart,
+  subtotal,
+  envio,
+  customerName: customerName.trim(),
+  customerPhone: customerPhone.trim(),
+});
       if (waWindow) {
         waWindow.location.href = whatsappUrl;
       } else {
@@ -329,12 +345,30 @@ const whatsappUrl = `https://api.whatsapp.com/send?phone=59899191250&text=${enco
               <p className="font-bold mt-1">{totalText}</p>
             </div>
 
-            <button
-              onClick={handleSendOrder}
-              className="w-full mt-4 py-3 bg-emerald-500 text-white rounded-xl text-lg font-semibold active:scale-95 transition"
-            >
-              Enviar pedido
-            </button>
+            <div className="mt-4 space-y-3">
+  <input
+    type="text"
+    placeholder="Nombre y apellido"
+    value={customerName}
+    onChange={(e) => setCustomerName(e.target.value)}
+    className="w-full p-3 border rounded-xl"
+  />
+
+  <input
+    type="tel"
+    placeholder="Si es tu primera compra escribe tu teléfono"
+    value={customerPhone}
+    onChange={(e) => setCustomerPhone(e.target.value)}
+    className="w-full p-3 border rounded-xl"
+  />
+</div>
+
+<button
+  onClick={handleSendOrder}
+  className="w-full mt-4 py-3 bg-emerald-500 text-white rounded-xl text-lg font-semibold active:scale-95 transition"
+>
+  Enviar pedido
+</button>
           </div>
         </div>
       )}
