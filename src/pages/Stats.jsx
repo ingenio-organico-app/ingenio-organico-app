@@ -274,7 +274,10 @@ export default function Stats() {
                       >
                         <Link to={`/stats/${o.id}`}>
                           <div className="font-semibold">
-                            Cliente: {o.customerName || "Sin nombre"}
+                           Cliente: {o.customerName || "Sin nombre"}
+{o.customerPhone && (
+  <div>Teléfono: {o.customerPhone}</div>
+)}
                           </div>
                           <div className="text-sm text-gray-600">
                             {o.cart?.length || 0} productos — Total: ${total}
